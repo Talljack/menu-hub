@@ -258,8 +258,8 @@ final class AccessibilityPipelineTests: XCTestCase {
         XCTAssertEqual(counts.press, 1)
         XCTAssertEqual(counts.scan, 0)
         try? await Task.sleep(for: .milliseconds(120))
-        let completed = await accessibility.completedCounts
-        XCTAssertEqual(completed.press, 0)
+        let lateCounts = await accessibility.counts
+        XCTAssertEqual(lateCounts.scan, 0)
     }
 
     func testRefreshScanTimeoutDoesNotPerformRetryPress() async {

@@ -207,6 +207,8 @@ private func withTimeout<Value: Sendable>(
     // interrupt a synchronous Accessibility system call that has already started;
     // any such late result is discarded by TimeoutCompletion.
     let completion = TimeoutCompletion<Value>()
+    let clock = ContinuousClock()
+    let deadline = clock.now.advanced(by: duration)
     return await withTaskCancellationHandler {
         await withCheckedContinuation { continuation in
             completion.install(continuation)
@@ -215,13 +217,19 @@ private func withTimeout<Value: Sendable>(
                 guard await startGate.wait() else { return }
                 await Task.yield()
                 guard !Task.isCancelled else { return }
-                completion.operationFinished(await operation())
+                let value = await operation()
+                guard !Task.isCancelled else { return }
+                guard clock.now < deadline else {
+                    completion.timeoutOrCancel()
+                    return
+                }
+                completion.operationFinished(value)
             }
             let registered = completion.registerOperation(operationTask)
             startGate.open(registered)
             let timerTask = Task.detached {
                 do {
-                    try await Task.sleep(for: duration)
+                    try await clock.sleep(until: deadline)
                     completion.timeoutOrCancel()
                 } catch {
                     return
