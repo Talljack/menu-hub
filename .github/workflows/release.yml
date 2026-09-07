@@ -1,6 +1,9 @@
 name: macOS Release
 
 on:
+  pull_request:
+    branches:
+      - "main"
   push:
     branches:
       - "main"
@@ -86,7 +89,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: Menu-Hub-${{ github.ref_name }}-macOS
+          name: Menu-Hub-build-${{ github.run_number }}-macOS
           path: |
             dist/*.zip
             dist/*.sha256
