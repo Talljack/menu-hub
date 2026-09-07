@@ -1,0 +1,107 @@
+name: MenuHub
+options:
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    ENABLE_HARDENED_RUNTIME: YES
+    CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: 636LV693YD
+    CODE_SIGN_STYLE: Automatic
+targets:
+  MenuHubCore:
+    type: library.static
+    platform: macOS
+    sources: [Sources/MenuHubCore]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.MenuHubCore
+        GENERATE_INFOPLIST_FILE: YES
+  MenuHub:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/MenuHub
+      - path: Resources/Assets.xcassets
+        buildPhase: resources
+      - path: Resources/en.lproj
+        buildPhase: resources
+      - path: Resources/zh-Hans.lproj
+        buildPhase: resources
+    dependencies:
+      - target: MenuHubCore
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Menu Hub
+        CFBundleName: MenuHub
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: "14.0"
+        LSUIElement: true
+        NSAccessibilityUsageDescription: Menu Hub reads accessible menu bar item names and performs a press only when you explicitly choose an item. Data stays on this Mac.
+        NSPrincipalClass: NSApplication
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.MenuHub
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_APP_SANDBOX: NO
+  FeasibilityProbe:
+    type: tool
+    platform: macOS
+    sources: [Sources/FeasibilityProbe]
+    dependencies:
+      - target: MenuHubCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.MenuHub.FeasibilityProbe
+        ENABLE_APP_SANDBOX: NO
+        OTHER_SWIFT_FLAGS: $(inherited) -parse-as-library
+  MenuHubCoreTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [Tests/MenuHubCoreTests]
+    dependencies:
+      - target: MenuHubCore
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.MenuHubCoreTests
+  MenuHubTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [Tests/MenuHubTests]
+    dependencies:
+      - target: MenuHub
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.MenuHubTests
+  MenuHubUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources: [Tests/MenuHubUITests]
+    dependencies:
+      - target: MenuHub
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.MenuHubUITests
+        TEST_TARGET_NAME: MenuHub
+schemes:
+  MenuHub:
+    build:
+      targets:
+        MenuHub: all
+        MenuHubCoreTests: [test]
+    test:
+      targets: [MenuHubCoreTests, MenuHubTests, MenuHubUITests]
+  FeasibilityProbe:
+    build:
+      targets:
+        FeasibilityProbe: all

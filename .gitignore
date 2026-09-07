@@ -1,0 +1,12 @@
+.DS_Store
+.build/
+.swiftpm/
+.superpowers/
+DerivedData/
+dist/
+work/
+MenuHub.xcodeproj/
+*.xcresult
+outputs/*.png
+outputs/*.zip
+outputs/FeasibilityProbe

@@ -1,0 +1,1 @@
+../docs/superpowers/plans/2026-09-06-menu-hub-mvp-completion.md
