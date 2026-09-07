@@ -66,7 +66,7 @@ git tag -a v0.1.0 -m "Menu Hub 0.1.0"
 git push origin v0.1.0
 ```
 
-推送 `v*` 标签会触发 `.github/workflows/release.yml`，运行测试、构建 Universal App、生成 ZIP 与 SHA-256，并在 Developer ID 签名、Apple 公证与 stapling 全部成功后创建 GitHub Release。正式标签要求仓库配置以下 Secrets：
+合并或推送到 `main` 会触发 `.github/workflows/release.yml`，运行测试、构建 Universal App 并上传内部构建产物。推送 `v*` 标签则会在 Developer ID 签名、Apple 公证与 stapling 全部成功后创建正式 GitHub Release。正式标签要求仓库配置以下 Secrets：
 
 - `APPLE_CERTIFICATE_P12_BASE64`
 - `APPLE_CERTIFICATE_PASSWORD`
