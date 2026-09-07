@@ -57,8 +57,11 @@ final class ManagementModel: ObservableObject {
         }
     }
 
-    private func restoreGroup(_ deletion: DeletedGroupSnapshot) {
-        Task { await controller.restoreDeletedGroup(deletion) }
+    nonisolated private func restoreGroup(_ deletion: DeletedGroupSnapshot) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await controller.restoreDeletedGroup(deletion)
+        }
     }
 }
 
