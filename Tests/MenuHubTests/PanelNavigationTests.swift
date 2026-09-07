@@ -30,7 +30,7 @@ final class PanelNavigationTests: XCTestCase {
         let resolver = HostApplicationResolver(
             executableURLForPID: { _ in outerURL.appendingPathComponent("Contents/Frameworks/Lark Helper.app/Contents/MacOS/Lark Helper") },
             metadataForApplicationURL: { url in
-                XCTAssertEqual(url, outerURL)
+                XCTAssertEqual(url.standardizedFileURL.path, outerURL.standardizedFileURL.path)
                 return HostApplicationMetadata(displayName: "飞书", icon: nil)
             }
         )
