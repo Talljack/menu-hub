@@ -129,18 +129,49 @@ public enum DynamicStatusTitle {
         return old.hasDigit && new.hasDigit && old.skeleton == new.skeleton
     }
 
-    private static func analyzed(_ value: String) -> (hasDigit: Bool, skeleton: String) {
+    /// Some title-only status items expose only their unread badge while it is
+    /// nonzero, then fall back to the host process name when the badge clears.
+    /// The bundle/path match is enforced by the caller; this final check only
+    /// accepts a badge-only value on one side and a known host name on the other.
+    public static func canTransition(
+        from oldValue: String,
+        to newValue: String,
+        knownHostNames: [String]
+    ) -> Bool {
+        if canTransition(from: oldValue, to: newValue) { return true }
+        let old = analyzed(oldValue)
+        let new = analyzed(newValue)
+        let hosts = Set(knownHostNames.map(normalizedText).filter { !$0.isEmpty })
+        return (old.isBadgeOnly && hosts.contains(normalizedText(newValue)))
+            || (new.isBadgeOnly && hosts.contains(normalizedText(oldValue)))
+    }
+
+    private static func analyzed(_ value: String) -> (hasDigit: Bool, skeleton: String, isBadgeOnly: Bool) {
         var hasDigit = false
         let ignoredBadgeCharacters = CharacterSet(charactersIn: "()[]{}（）【】")
-        let skeleton = value.folding(
+        let folded = value.folding(
             options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
             locale: Locale(identifier: "en_US_POSIX")
-        ).unicodeScalars.compactMap { scalar -> UnicodeScalar? in
+        )
+        let skeleton = folded.unicodeScalars.compactMap { scalar -> UnicodeScalar? in
             if CharacterSet.decimalDigits.contains(scalar) { hasDigit = true; return nil }
             if CharacterSet.whitespacesAndNewlines.contains(scalar) || ignoredBadgeCharacters.contains(scalar) { return nil }
             return scalar
         }.map(String.init).joined()
-        return (hasDigit, skeleton)
+        let badgeDecorations = CharacterSet.punctuationCharacters.union(.symbols)
+        let remainingScalars = folded.unicodeScalars.filter {
+            !CharacterSet.decimalDigits.contains($0) && !CharacterSet.whitespacesAndNewlines.contains($0)
+        }
+        let isBadgeOnly = hasDigit && remainingScalars.allSatisfy { badgeDecorations.contains($0) }
+        return (hasDigit, skeleton, isBadgeOnly)
+    }
+
+    private static func normalizedText(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
     }
 }
 
@@ -181,9 +212,10 @@ public enum CatalogReconciler {
                     && secondaryFingerprint(document.items[$0].identity) == secondary
             }
             let transitioningIndices = secondaryIndices.filter {
-                DynamicStatusTitle.canTransition(
-                    from: document.items[$0].identity.originalName,
-                    to: identity.originalName
+                isSafeDynamicTransition(
+                    record: document.items[$0],
+                    snapshot: snapshot,
+                    newIdentity: identity
                 )
             }
             // Title-only status items (notification badges are the common case) used
@@ -198,9 +230,10 @@ public enum CatalogReconciler {
                       incomingSecondaryCounts[secondary] == 1,
                       secondaryIndices.count == 1,
                       let index = secondaryIndices.first,
-                      DynamicStatusTitle.canTransition(
-                          from: document.items[index].identity.originalName,
-                          to: identity.originalName
+                      isSafeDynamicTransition(
+                          record: document.items[index],
+                          snapshot: snapshot,
+                          newIdentity: identity
                       ) else { return nil }
                 return index
             }()
@@ -267,6 +300,25 @@ public enum CatalogReconciler {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
         return bundle + "|path:" + identity.path.map(String.init).joined(separator: ".")
+    }
+
+    private static func isSafeDynamicTransition(
+        record: MenuBarItemRecord,
+        snapshot: AccessibilitySnapshot,
+        newIdentity: MenuBarItemIdentity
+    ) -> Bool {
+        if DynamicStatusTitle.canTransition(
+            from: record.identity.originalName,
+            to: newIdentity.originalName
+        ) {
+            return true
+        }
+        guard record.identity.processIdentifier == snapshot.processIdentifier else { return false }
+        return DynamicStatusTitle.canTransition(
+            from: record.identity.originalName,
+            to: newIdentity.originalName,
+            knownHostNames: [record.hostName, snapshot.processName]
+        )
     }
 
     private static func preferredRecordIndex(in indices: [Int], items: [MenuBarItemRecord]) -> Int? {
