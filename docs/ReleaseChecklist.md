@@ -22,7 +22,7 @@
 
 - [x] Task 8 里程碑：185 项测试，0 失败。
 - [x] Task 8 里程碑：Debug 与 Release 构建成功。
-- [x] 当前候选代码运行 `swift test`：238 项 XCTest + 2 项 Swift Testing，0 失败。
+- [x] 当前候选代码运行 `swift test`：239 项 XCTest + 2 项 Swift Testing，0 失败。
 - [ ] 最终代码冻结后运行完整 Xcode 单元/集成测试。
 - [ ] 建立并通过独立 UI Test target，包括双语、外观、权限 fixture、键盘和持久化场景。
 - [ ] Release 模式 100 项搜索测试低于 16 ms，并记录实测数字。

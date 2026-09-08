@@ -22,6 +22,19 @@ enum HubPanelBackgroundMode: Equatable {
     static func resolve(reduceTransparency: Bool) -> Self { reduceTransparency ? .solid : .material }
 }
 
+enum HubGridProjection {
+    static func items(
+        records: [MenuBarItemRecord],
+        availableItems: [HubPanelItem]
+    ) -> [HubPanelItem] {
+        var itemsByID: [String: HubPanelItem] = [:]
+        for item in availableItems where itemsByID[item.id] == nil {
+            itemsByID[item.id] = item
+        }
+        return records.compactMap { itemsByID[$0.id] }
+    }
+}
+
 struct HubPanelView: View {
     @ObservedObject var model: HubPanelModel
     @FocusState private var searchFocused: Bool
@@ -139,32 +152,34 @@ struct HubPanelView: View {
     }
 
     private var iconGrid: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8)], spacing: 8) {
-            ForEach(model.snapshot.all) { record in
-                if let item = model.items.first(where: { $0.id == record.id }) {
-                    Button {
-                        model.selectionID = item.id
-                        model.invoke(item)
-                    } label: {
-                        VStack(spacing: 5) {
-                            Group {
-                                if let icon = item.hostIcon { Image(nsImage: icon).resizable().scaledToFit() }
-                                else { Image(systemName: "app.dashed").resizable().scaledToFit().foregroundStyle(.secondary) }
-                            }
-                            .frame(width: 28, height: 28)
-                            Text(item.primaryTitle).font(.caption).lineLimit(2).multilineTextAlignment(.center)
-                            if model.catalogController.document.preferences.showCapabilities {
-                                Text(item.secondaryTitle).font(.caption2).foregroundStyle(.secondary)
-                            }
+        let gridItems = HubGridProjection.items(
+            records: model.snapshot.all,
+            availableItems: model.items
+        )
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8)], spacing: 8) {
+            ForEach(gridItems) { item in
+                Button {
+                    model.selectionID = item.id
+                    model.invoke(item)
+                } label: {
+                    VStack(spacing: 5) {
+                        Group {
+                            if let icon = item.hostIcon { Image(nsImage: icon).resizable().scaledToFit() }
+                            else { Image(systemName: "app.dashed").resizable().scaledToFit().foregroundStyle(.secondary) }
                         }
-                        .frame(maxWidth: .infinity, minHeight: 76)
+                        .frame(width: 28, height: 28)
+                        Text(item.primaryTitle).font(.caption).lineLimit(2).multilineTextAlignment(.center)
+                        if model.catalogController.document.preferences.showCapabilities {
+                            Text(item.secondaryTitle).font(.caption2).foregroundStyle(.secondary)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .disabled(!item.canInvoke)
-                    .contextMenu {
-                        Button(L("panel.showInManagement")) { model.openManagement(itemID: item.id) }
-                        Button(L(item.record.isFavorite ? "panel.unfavorite" : "panel.favorite")) { model.toggleFavorite(item) }
-                    }
+                    .frame(maxWidth: .infinity, minHeight: 76)
+                }
+                .buttonStyle(.plain)
+                .disabled(!item.canInvoke)
+                .contextMenu {
+                    Button(L("panel.showInManagement")) { model.openManagement(itemID: item.id) }
+                    Button(L(item.record.isFavorite ? "panel.unfavorite" : "panel.favorite")) { model.toggleFavorite(item) }
                 }
             }
         }

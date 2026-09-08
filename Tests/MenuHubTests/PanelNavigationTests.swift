@@ -154,6 +154,20 @@ final class PanelNavigationTests: XCTestCase {
         XCTAssertEqual(HubPanelBackgroundMode.resolve(reduceTransparency: false), .material)
     }
 
+    func testGridProjectionCompactsUnavailableCatalogRecordsWithoutLeavingEmptyCells() {
+        let first = makeItem(host: "WeChat", item: "wechat")
+        let second = makeItem(host: "PopClip", item: "popclip")
+        let unavailable = makeItem(host: "Stopped", item: "stopped").record
+
+        XCTAssertEqual(
+            HubGridProjection.items(
+                records: [first.record, unavailable, second.record],
+                availableItems: [first, second]
+            ).map(\.id),
+            ["wechat", "popclip"]
+        )
+    }
+
     func testRowOwnedActionMenuStateAcceptsExternalRequestAndDismissesLocally() {
         var state = HubItemActionMenuState()
         state.applyExternalRequest(false)
