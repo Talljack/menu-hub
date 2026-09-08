@@ -161,7 +161,7 @@ final class PanelNavigationTests: XCTestCase {
 
         XCTAssertEqual(
             HubGridProjection.items(
-                records: [first.record, unavailable, second.record],
+                records: [first.record, unavailable, first.record, second.record],
                 availableItems: [first, second]
             ).map(\.id),
             ["wechat", "popclip"]

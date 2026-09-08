@@ -31,7 +31,11 @@ enum HubGridProjection {
         for item in availableItems where itemsByID[item.id] == nil {
             itemsByID[item.id] = item
         }
-        return records.compactMap { itemsByID[$0.id] }
+        var emittedIDs = Set<String>()
+        return records.compactMap { record in
+            guard emittedIDs.insert(record.id).inserted else { return nil }
+            return itemsByID[record.id]
+        }
     }
 }
 
