@@ -213,6 +213,90 @@ final class CatalogControllerTests: XCTestCase {
         XCTAssertEqual(controller.runtimeSnapshots[controller.document.items[0].id]?.title, "6")
     }
 
+    func testKnownItemRefreshUpdatesDisappearingWeChatBadgeAndRemainsInvokable() async throws {
+        func weChat(_ title: String?) -> AccessibilitySnapshot {
+            AccessibilitySnapshot(
+                processIdentifier: 937,
+                processName: "WeChat",
+                bundleIdentifier: "com.tencent.xinWeChat",
+                title: title,
+                role: "AXMenuBarItem",
+                subrole: nil,
+                identifier: nil,
+                positionX: 995,
+                positionY: 4.5,
+                width: 40,
+                height: 24,
+                actions: ["AXPress"],
+                accessibilityPath: [0]
+            )
+        }
+        let accessibility = ControlledAccessibility()
+        let controller = CatalogController(
+            store: FakeCatalogStore(),
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            canLaunchHost: { $0 == "com.tencent.xinWeChat" },
+            hostMetadataResolver: ClassifyingHostMetadataResolver(systemBundles: [])
+        )
+        let scan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(0, with: .init(snapshots: [weChat("1")], errors: []))
+        await scan.value
+        let itemID = try XCTUnwrap(controller.document.items.first?.id)
+        await accessibility.setRefreshResult(.init(snapshots: [weChat(nil)], errors: []))
+
+        await controller.refreshKnownItems()
+        let outcome = await controller.invoke(itemID: itemID)
+        let pressRequestCount = await accessibility.pressRequestCount
+
+        XCTAssertEqual(controller.document.items.count, 1)
+        XCTAssertEqual(controller.document.items[0].identity.originalName, "WeChat")
+        XCTAssertEqual(outcome, .pressed)
+        XCTAssertEqual(pressRequestCount, 1)
+    }
+
+    func testKnownItemRefreshRejectsReusedPIDAndPathFromAnotherBundle() async {
+        func snapshot(process: String, bundle: String, title: String?) -> AccessibilitySnapshot {
+            AccessibilitySnapshot(
+                processIdentifier: 937,
+                processName: process,
+                bundleIdentifier: bundle,
+                title: title,
+                role: "AXMenuBarItem",
+                subrole: nil,
+                identifier: nil,
+                positionX: 995,
+                positionY: 4.5,
+                width: 40,
+                height: 24,
+                actions: ["AXPress"],
+                accessibilityPath: [0]
+            )
+        }
+        let accessibility = ControlledAccessibility()
+        let controller = CatalogController(
+            store: FakeCatalogStore(),
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            hostMetadataResolver: ClassifyingHostMetadataResolver(systemBundles: [])
+        )
+        let original = snapshot(process: "WeChat", bundle: "com.tencent.xinWeChat", title: "1")
+        let scan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(0, with: .init(snapshots: [original], errors: []))
+        await scan.value
+        let reusedPID = snapshot(process: "Other", bundle: "com.example.other", title: nil)
+        await accessibility.setRefreshResult(.init(snapshots: [reusedPID], errors: []))
+
+        await controller.refreshKnownItems()
+
+        XCTAssertEqual(controller.document.items.count, 1)
+        XCTAssertEqual(controller.document.items[0].identity.bundleIdentifier, "com.tencent.xinWeChat")
+        XCTAssertEqual(controller.document.items[0].identity.originalName, "1")
+        XCTAssertEqual(controller.runtimeSnapshots.values.first, original)
+    }
+
     func testOlderLightweightRefreshCannotOverwriteNewerFullScan() async {
         let accessibility = ControlledAccessibility(controlRefresh: true)
         let controller = makeController(store: FakeCatalogStore(), accessibility: accessibility)

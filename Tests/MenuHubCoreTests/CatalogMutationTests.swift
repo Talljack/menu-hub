@@ -162,9 +162,83 @@ final class CatalogMutationTests: XCTestCase {
         XCTAssertEqual(result.runtimeSnapshots["lark-count"], updated)
     }
 
+    func testReconcileBadgeDisappearingIntoHostNameKeepsWeChatRecordID() {
+        let existing = MenuBarItemRecord(
+            id: "wechat-badge",
+            identity: .init(
+                processIdentifier: 42,
+                bundleIdentifier: "com.tencent.xinWeChat",
+                originalName: "1",
+                axIdentifier: nil,
+                path: [0]
+            ),
+            hostName: "WeChat",
+            capability: .full,
+            lastSeenAt: now.addingTimeInterval(-10)
+        )
+        var document = CatalogDocument(items: [existing], groups: [], preferences: .default)
+        let withoutBadge = makeSnapshot(
+            processName: "WeChat",
+            title: nil,
+            bundleIdentifier: "com.tencent.xinWeChat",
+            path: [0],
+            identifier: nil
+        )
+
+        let result = CatalogReconciler.reconcile(
+            &document,
+            snapshots: [withoutBadge],
+            at: now,
+            canLaunchHost: { _ in true }
+        )
+
+        XCTAssertEqual(document.items.count, 1)
+        XCTAssertEqual(document.items[0].id, "wechat-badge")
+        XCTAssertEqual(document.items[0].identity.originalName, "WeChat")
+        XCTAssertEqual(result.runtimeSnapshots["wechat-badge"], withoutBadge)
+    }
+
+    func testReconcileBadgeToHostFallbackRequiresSameProcessGeneration() {
+        let existing = MenuBarItemRecord(
+            id: "old-wechat",
+            identity: .init(
+                processIdentifier: 41,
+                bundleIdentifier: "com.tencent.xinWeChat",
+                originalName: "1",
+                axIdentifier: nil,
+                path: [0]
+            ),
+            hostName: "WeChat",
+            capability: .full,
+            lastSeenAt: now.addingTimeInterval(-10)
+        )
+        var document = CatalogDocument(items: [existing], groups: [], preferences: .default)
+        let restartedWithoutBadge = makeSnapshot(
+            processName: "WeChat",
+            title: nil,
+            bundleIdentifier: "com.tencent.xinWeChat",
+            path: [0],
+            identifier: nil
+        )
+
+        let result = CatalogReconciler.reconcile(
+            &document,
+            snapshots: [restartedWithoutBadge],
+            at: now,
+            canLaunchHost: { _ in true }
+        )
+
+        XCTAssertEqual(document.items.count, 2)
+        XCTAssertEqual(document.items.first(where: { $0.id == "old-wechat" })?.identity.originalName, "1")
+        XCTAssertNil(result.runtimeSnapshots["old-wechat"])
+    }
+
     func testDynamicStatusTransitionRejectsUnrelatedTextAtSamePath() {
         XCTAssertTrue(DynamicStatusTitle.canTransition(from: "3", to: "6"))
         XCTAssertTrue(DynamicStatusTitle.canTransition(from: "Unread (3)", to: "Unread (6)"))
+        XCTAssertTrue(DynamicStatusTitle.canTransition(from: "1", to: "WeChat", knownHostNames: ["WeChat"]))
+        XCTAssertTrue(DynamicStatusTitle.canTransition(from: "WeChat", to: "99+", knownHostNames: ["WeChat"]))
+        XCTAssertFalse(DynamicStatusTitle.canTransition(from: "1", to: "Settings", knownHostNames: ["WeChat"]))
         XCTAssertFalse(DynamicStatusTitle.canTransition(from: "Sync", to: "VPN"))
         XCTAssertFalse(DynamicStatusTitle.canTransition(from: "Mode 1", to: "Other 2"))
 

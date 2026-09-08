@@ -57,16 +57,17 @@ Menu Hub is an `LSUIElement` app, so it does not show a Dock icon or a normal ma
 
 ## Versioning and CI releases
 
-The root `VERSION` file is the source of truth and must match `MARKETING_VERSION` in `project.yml`. To produce a tested Universal (`arm64 + x86_64`) build locally:
+The root `VERSION` file is the source of truth and must match `MARKETING_VERSION` in `project.yml`. To produce tested native builds for Apple Silicon (`arm64`) and Intel (`x86_64`) locally:
 
 ```sh
 ./scripts/build-release.sh
 ```
 
-Every push or merge to `main` runs [.github/workflows/release.yml](.github/workflows/release.yml), which tests the project, builds a Universal app, packages it, and uploads a CI artifact.
+Every push or merge to `main` runs [.github/workflows/release.yml](.github/workflows/release.yml), which tests the project, builds both chip architectures, and uploads architecture-specific DMG and ZIP artifacts.
 
-Pushing a `v*` tag creates a formal GitHub Release only after Developer ID signing, Apple notarization, and stapling succeed. Tagged releases require these repository secrets:
+Pushing a `v*` tag always creates a visible GitHub Release. Without Apple credentials it is clearly marked as an unsigned pre-release and its filenames contain `-UNSIGNED`. With all of the following secrets, CI creates a Developer ID signed, notarized, and stapled normal release:
 
+- `FORMAL_RELEASE_ENABLED` (`true` only when the formal UI release gate is ready)
 - `APPLE_CERTIFICATE_P12_BASE64`
 - `APPLE_CERTIFICATE_PASSWORD`
 - `APPLE_SIGNING_IDENTITY`
@@ -74,7 +75,9 @@ Pushing a `v*` tag creates a formal GitHub Release only after Developer ID signi
 - `APP_STORE_CONNECT_KEY_ID`
 - `APP_STORE_CONNECT_ISSUER_ID`
 
-Without all required secrets, tag builds fail closed and do not publish an unsigned or unnotarized release.
+Download `arm64` on Apple Silicon Macs and `x86_64` on Intel Macs. Each release provides a drag-to-Applications DMG and a ZIP containing `Menu Hub.app`.
+
+Store formal-release secrets in the protected GitHub `release` environment. Tag jobs require approval there, and a release tag must point to the current `main` commit.
 
 The Phase 0 probe remains available for public-API compatibility testing:
 

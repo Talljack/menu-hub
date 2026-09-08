@@ -282,6 +282,9 @@ final class CatalogController: ObservableObject {
             guard let pair = existing.first(where: {
                 $0.value.processIdentifier == snapshot.processIdentifier
                     && $0.value.accessibilityPath == snapshot.accessibilityPath
+                    && Self.normalizedBundleIdentifier($0.value.bundleIdentifier)
+                        == Self.normalizedBundleIdentifier(snapshot.bundleIdentifier)
+                    && !Self.normalizedBundleIdentifier(snapshot.bundleIdentifier).isEmpty
             }) else { continue }
             updated[pair.key] = snapshot
             guard let index = document.items.firstIndex(where: { $0.id == pair.key }) else { continue }
@@ -289,7 +292,9 @@ final class CatalogController: ObservableObject {
             let oldIdentifier = oldIdentity.axIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let newTitle = snapshot.title ?? snapshot.processName
             let isSafeDynamicTransition = DynamicStatusTitle.canTransition(
-                from: oldIdentity.originalName, to: newTitle
+                from: oldIdentity.originalName,
+                to: newTitle,
+                knownHostNames: [document.items[index].hostName, snapshot.processName]
             )
             if !oldIdentifier.isEmpty || isSafeDynamicTransition {
                 document.items[index].identity.processIdentifier = snapshot.processIdentifier
@@ -419,6 +424,10 @@ final class CatalogController: ObservableObject {
             ?? WorkspaceLaunchKnowledge.canLaunch(bundleIdentifier: normalized) {
                 NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0)
             }
+    }
+
+    private static func normalizedBundleIdentifier(_ value: String?) -> String {
+        value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
     }
 
     private func record(_ outcome: ActionOutcome, forItemID itemID: String) async -> ActionOutcome {
