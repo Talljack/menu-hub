@@ -1,11 +1,11 @@
 # Menu Hub 本地验证报告
 
-更新时间：2026-09-07
+更新时间：2026-09-08
 目标：Swift 6、macOS 14+、Bundle ID `com.local.MenuHub`
 
 ## 当前结论
 
-本地 Release 验收版已经完成构建、带时间戳的 Developer ID 签名、替换安装并启动，安装位置为 `/Applications/Menu Hub.app`。最终代码的 SwiftPM 门禁为 234 项测试、0 失败；中英文资源完整性另有 2 项 Swift Testing 测试通过。
+本地 Release 验收版已经完成 `arm64` / `x86_64` 独立构建、DMG/ZIP 打包与架构验证；本机 `arm64` 副本经 Developer ID 签名后替换安装并启动，位置为 `/Applications/Menu Hub.app`。当前 SwiftPM 门禁为 238 项 XCTest、0 失败；中英文资源完整性另有 2 项 Swift Testing 测试通过。
 
 用户报告的问题已有对应实测证据：面板使用固定头尾和独立单滚动区，并为系统滚动条保留右侧空间；飞书动态标题会随扫描更新，最终行标题由“宿主 App — 状态项”组成。当前 Mac 的主语言为 English，因此显示系统本地化名称 `Feishu`；所有项目都保留宿主名称，不再只显示数字。面板现只显示当前正在运行的用户 App，并在无权限降级时按宿主 App 去重；Control Center、Battery、Bluetooth、Clock、Focus、Passwords、Spotlight、SystemUIServer 与输入法代理均被排除。
 
@@ -35,15 +35,17 @@
 
 | 门禁 | 最终结果 | 证据或边界 |
 |---|---|---|
-| `swift test` | PASS | 2026-09-07 23:52，234 项、0 失败；另有 2 项本地化 Swift Testing 测试通过 |
+| `swift test` | PASS | 2026-09-08，238 项、0 失败；另有 2 项本地化 Swift Testing 测试通过 |
 | Xcode UI tests | BLOCKED | 测试 target 和场景已建立；runner 在建立连接前超时，未伪报通过 |
 | Release search performance | PASS | 100 项搜索回归测试已通过，早前 Release 实测约 0.675 ms/次，目标 < 16 ms |
-| Clean Release build | PASS | Universal Release 产物已生成并安装，最低部署目标 macOS 14 |
+| Clean Release build | PASS | `arm64` 与 `x86_64` 独立 Release 构建均成功，最低部署目标 macOS 14 |
 | Bundle identity/signature | PASS | `com.local.MenuHub`；Developer ID `636LV693YD`；严格深度签名校验通过；Hardened Runtime |
 | Linked frameworks/privacy scan | PASS | 仅系统 Framework/Swift 运行库；无 Electron、第三方 SDK、网络或分析框架 |
-| Install/launch | PASS | `/Applications/Menu Hub.app`；唯一进程 PID 85675 |
+| Install/launch | PASS | 本机 `arm64` 版安装于 `/Applications/Menu Hub.app`，唯一进程 PID 92120 |
 | Release 崩溃回归 | PASS | 修复 Release-only SwiftUI actor 隔离崩溃后，再次用 `⌥M` 打开未产生新崩溃报告，进程持续运行 |
 | Panel/scroll/Lark display | PASS | 已通过本机辅助功能树与截图检查：系统组件消失、每个运行 App 一行、飞书使用宿主名加动态数字；滚动条位于预留槽内 |
+| WeChat badge disappearance | PASS | 实际复现旧记录 `WeChat — 1` 到无角标；修复后点击会关闭 Hub 成功态并唤起微信，再打开无 stale warning |
+| DMG/ZIP architecture packages | PASS | 两套 DMG 均可挂载且含 Applications 快捷方式；两套 ZIP 均可解压；Mach-O 分别严格为 `arm64` / `x86_64`，校验和通过 |
 | Settings/management/localization | PARTIAL | 代码、自动化与打包资源通过；最终窗口视觉切换待解锁 |
 | Restore and crash safety | PARTIAL | 状态机与异常启动测试通过；长循环及 SystemUIServer/硬件场景未完成 |
 

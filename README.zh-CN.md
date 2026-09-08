@@ -57,16 +57,17 @@ Menu Hub 是 `LSUIElement` 菜单栏 App，不显示 Dock 图标或普通主窗�
 
 ## 版本与 CI 发布
 
-根目录 `VERSION` 是版本号唯一来源，必须与 `project.yml` 中的 `MARKETING_VERSION` 一致。本地生成经过测试的 Universal（`arm64 + x86_64`）构建：
+根目录 `VERSION` 是版本号唯一来源，必须与 `project.yml` 中的 `MARKETING_VERSION` 一致。本地生成经过测试的 Apple Silicon（`arm64`）和 Intel（`x86_64`）双架构构建：
 
 ```sh
 ./scripts/build-release.sh
 ```
 
-每次推送或合并到 `main` 都会运行 [.github/workflows/release.yml](.github/workflows/release.yml)，执行测试、Universal 构建、打包并上传 CI 构件。
+每次推送或合并到 `main` 都会运行 [.github/workflows/release.yml](.github/workflows/release.yml)，执行测试、分别构建两种芯片架构，并上传对应的 DMG 和 ZIP 构件。
 
-推送 `v*` 标签后，只有 Developer ID 签名、Apple 公证和 stapling 全部成功，才会创建正式 GitHub Release。标签发布需要以下仓库 Secrets：
+推送 `v*` 标签后一定会创建可见的 GitHub Release。未配置 Apple 凭据时会明确标记为未签名预发布版，文件名包含 `-UNSIGNED`；以下 Secrets 全部配置后，CI 才会生成 Developer ID 签名、Apple 公证并 stapling 的正式版本：
 
+- `FORMAL_RELEASE_ENABLED`（仅在正式 UI 发布门禁可用后设为 `true`）
 - `APPLE_CERTIFICATE_P12_BASE64`
 - `APPLE_CERTIFICATE_PASSWORD`
 - `APPLE_SIGNING_IDENTITY`
@@ -74,7 +75,9 @@ Menu Hub 是 `LSUIElement` 菜单栏 App，不显示 Dock 图标或普通主窗�
 - `APP_STORE_CONNECT_KEY_ID`
 - `APP_STORE_CONNECT_ISSUER_ID`
 
-Secrets 不完整时会安全失败，不会发布未签名或未公证的正式版本。
+Apple 芯片 Mac 下载 `arm64`，Intel Mac 下载 `x86_64`。每种架构都同时提供可拖入“应用程序”的 DMG，以及包含 `Menu Hub.app` 的 ZIP。
+
+正式发布 Secrets 应保存在受保护的 GitHub `release` environment 中。Tag 任务需要在那里人工批准，而且 Tag 必须指向当前 `main` 提交。
 
 Phase 0 探针仍可用于验证公开 API 的真实兼容性：
 

@@ -6,10 +6,10 @@ Every semantic version tag must create a visible GitHub Release containing both 
 
 ## Artifacts
 
-- Build one Universal macOS application containing `arm64` and `x86_64` slices.
-- Produce `Menu-Hub-<version>-macos-universal.dmg` with `Menu Hub.app` and an `/Applications` shortcut for drag installation.
-- Produce `Menu-Hub-<version>-macos-universal.zip` for update tools and manual extraction.
-- Produce SHA-256 files for both artifacts.
+- Build two native macOS applications: Apple Silicon `arm64` and Intel `x86_64`.
+- Produce `Menu-Hub-<version>-macos-arm64.dmg` and `Menu-Hub-<version>-macos-x86_64.dmg`, each with `Menu Hub.app` and an `/Applications` shortcut for drag installation.
+- Produce matching architecture-specific ZIP archives for update tools and manual extraction.
+- Produce SHA-256 files for all four artifacts.
 - Validate the ZIP, DMG image, application architecture, bundle version, and signature state before upload.
 
 ## Release channels
@@ -17,12 +17,14 @@ Every semantic version tag must create a visible GitHub Release containing both 
 - When all signing and notarization secrets are present, CI signs the app with Developer ID and Hardened Runtime, notarizes it with Apple, staples the ticket, verifies Gatekeeper acceptance, packages the stapled app, and creates a normal GitHub Release.
 - When credentials are incomplete, CI packages the unsigned app with `-UNSIGNED` in both filenames, creates a GitHub pre-release titled `Unsigned Preview`, and includes an explicit Gatekeeper warning. It must not claim notarization or normal end-user readiness.
 - Pull requests and `main` pushes build and upload DMG/ZIP workflow artifacts but do not create GitHub Releases.
-- A `vX.Y.Z` tag creates exactly one release after confirming the tag matches `VERSION` and `MARKETING_VERSION`.
+- A `vX.Y.Z` tag creates exactly one release after confirming the tag matches `VERSION` and `MARKETING_VERSION` and points to the current `main` commit.
+- Tag jobs use the protected `release` environment. Assets remain in a draft release until the exact eight-file manifest has uploaded and been verified.
 
 ## Required GitHub secrets for a formal release
 
 Developer ID signing:
 
+- `FORMAL_RELEASE_ENABLED`: set to `true` only after the formal UI test gate is ready.
 - `APPLE_CERTIFICATE_P12_BASE64`: base64-encoded Developer ID Application certificate and private key exported as PKCS#12.
 - `APPLE_CERTIFICATE_PASSWORD`: password protecting that PKCS#12 export.
 - `APPLE_SIGNING_IDENTITY`: exact identity name, currently `Developer ID Application: Yugang Cao (636LV693YD)`.
@@ -33,7 +35,7 @@ Apple notarization:
 - `APP_STORE_CONNECT_KEY_ID`: key ID shown in App Store Connect.
 - `APP_STORE_CONNECT_ISSUER_ID`: issuer ID shown in App Store Connect.
 
-Secrets are supplied only to the specific signing/notarization steps and are never printed, committed, or embedded in artifacts. Exporting and uploading the local private signing key requires explicit user confirmation.
+Secrets belong in the protected GitHub `release` environment, are supplied only to the specific signing/notarization steps, and are never printed, committed, or embedded in artifacts. Exporting and uploading the local private signing key requires explicit user confirmation.
 
 ## Failure behavior
 
@@ -46,6 +48,6 @@ Secrets are supplied only to the specific signing/notarization steps and are nev
 
 - Run the packaging script locally and verify both archive formats and checksums.
 - Open the mounted DMG and verify the app plus Applications shortcut.
-- Run the complete Swift test suite and Universal Release build.
+- Run the complete Swift test suite and both architecture-specific Release builds.
 - Validate the workflow through a pull request, merge it only after CI passes, and verify the post-merge artifacts.
 - After user confirmation, release `v0.1.1`; verify that the GitHub Release is visible and that both DMG and ZIP assets can be downloaded.

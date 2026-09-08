@@ -1,6 +1,6 @@
 # Menu Hub 发布清单
 
-状态日期：2026-09-07
+状态日期：2026-09-08
 
 本清单不把“代码已实现”等同于“已在真实机器验收”。只有带具体构建、测试、签名或实机证据的项目才能勾选。
 
@@ -22,14 +22,14 @@
 
 - [x] Task 8 里程碑：185 项测试，0 失败。
 - [x] Task 8 里程碑：Debug 与 Release 构建成功。
-- [ ] 最终代码冻结后重新运行 `swift test`，记录总数与日志。
+- [x] 当前候选代码运行 `swift test`：238 项 XCTest + 2 项 Swift Testing，0 失败。
 - [ ] 最终代码冻结后运行完整 Xcode 单元/集成测试。
 - [ ] 建立并通过独立 UI Test target，包括双语、外观、权限 fixture、键盘和持久化场景。
 - [ ] Release 模式 100 项搜索测试低于 16 ms，并记录实测数字。
 
 ## 安装前门禁
 
-- [ ] 执行干净 Release 构建，确认 `MACOSX_DEPLOYMENT_TARGET=14.0`。
+- [x] 分别执行干净 `arm64` 与 `x86_64` Release 构建，确认最低 macOS 14。
 - [ ] 使用 Developer ID Application 签名，带安全时间戳。
 - [ ] `codesign --verify --deep --strict --verbose=2` 通过。
 - [ ] 确认 Hardened Runtime 存在，发布 entitlements 不含 `get-task-allow`。
@@ -66,7 +66,8 @@
 
 - [ ] `spctl --assess --type execute --verbose=4` 通过。
 - [ ] `notarytool` 返回 Accepted，并完成 stapling 与二次验证。
-- [ ] 生成签名并公证的 ZIP 或 DMG，发布 SHA-256。
+- [x] 本地生成并验证 `arm64` / `x86_64` 两套 DMG、ZIP 与 SHA-256；当前公开 CI 在未配置 Apple Key 时只发布明确标记的未签名预发布版。
+- [ ] 生成 Developer ID 签名并经 Apple 公证的两套正式 DMG/ZIP。
 - [ ] 发布说明包含权限用途、公开 API 限制、恢复步骤、本地数据路径和卸载方式。
 
 在上述 Phase 0、最终自动化、实机与公证门禁完成前，不标记为“可公开发布”。
