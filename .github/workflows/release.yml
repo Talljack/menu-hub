@@ -10,6 +10,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to rebuild and publish
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -17,25 +22,38 @@ permissions:
 jobs:
   build-release:
     runs-on: macos-15
-    environment: ${{ startsWith(github.ref, 'refs/tags/') && 'release' || 'ci' }}
+    environment: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '') && 'release' || 'ci' }}
     env:
-      FORMAL_RELEASE: ${{ startsWith(github.ref, 'refs/tags/') && secrets.FORMAL_RELEASE_ENABLED == 'true' && secrets.APPLE_CERTIFICATE_P12_BASE64 != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 != '' && secrets.APP_STORE_CONNECT_KEY_ID != '' && secrets.APP_STORE_CONNECT_ISSUER_ID != '' }}
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+      FORMAL_RELEASE: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.release_tag != '') && secrets.FORMAL_RELEASE_ENABLED == 'true' && secrets.APPLE_CERTIFICATE_P12_BASE64 != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 != '' && secrets.APP_STORE_CONNECT_KEY_ID != '' && secrets.APP_STORE_CONNECT_ISSUER_ID != '' }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Validate release tag
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
         run: |
-          ./scripts/validate-version.sh "${GITHUB_REF_NAME}"
-          git fetch --no-tags origin main
-          TAG_COMMIT="$(git rev-list -n 1 "$GITHUB_REF_NAME")"
-          MAIN_COMMIT="$(git rev-parse origin/main)"
-          [[ "$TAG_COMMIT" == "$MAIN_COMMIT" ]] || {
-            echo "Release tag must point at the current origin/main commit." >&2
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Release tag must use the vMAJOR.MINOR.PATCH format." >&2
             exit 1
           }
+          ./scripts/validate-version.sh "$RELEASE_TAG"
+          git fetch --no-tags origin main
+          TAG_COMMIT="$(git rev-list -n 1 "$RELEASE_TAG")"
+          MAIN_COMMIT="$(git rev-parse origin/main)"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            git merge-base --is-ancestor "$TAG_COMMIT" "$MAIN_COMMIT" || {
+              echo "A retried release tag must be part of origin/main history." >&2
+              exit 1
+            }
+          else
+            [[ "$TAG_COMMIT" == "$MAIN_COMMIT" ]] || {
+              echo "Release tag must point at the current origin/main commit." >&2
+              exit 1
+            }
+          fi
 
       - name: Install pinned XcodeGen
         run: |
@@ -140,7 +158,7 @@ jobs:
             dist/*.sha256
 
   publish-release:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
     needs: build-release
     runs-on: ubuntu-latest
     environment: release
@@ -148,6 +166,7 @@ jobs:
       contents: write
     env:
       GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
       FORMAL_RELEASE: ${{ secrets.FORMAL_RELEASE_ENABLED == 'true' && secrets.APPLE_CERTIFICATE_P12_BASE64 != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 != '' && secrets.APP_STORE_CONNECT_KEY_ID != '' && secrets.APP_STORE_CONNECT_ISSUER_ID != '' }}
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -165,26 +184,26 @@ jobs:
             printf '%s\n' "${ASSETS[@]}" >&2
             exit 1
           }
-          if gh release view "$GITHUB_REF_NAME" --json isDraft >/tmp/menu-hub-release.json 2>/dev/null; then
+          if gh release view "$RELEASE_TAG" --json isDraft >/tmp/menu-hub-release.json 2>/dev/null; then
             [[ "$(jq -r .isDraft /tmp/menu-hub-release.json)" == true ]] || {
               echo "Release already exists and is public; refusing to replace assets." >&2
               exit 1
             }
           elif [[ "$FORMAL_RELEASE" == "true" ]]; then
-            gh release create "$GITHUB_REF_NAME" --draft --verify-tag --generate-notes \
-              --title "Menu Hub $GITHUB_REF_NAME"
+            gh release create "$RELEASE_TAG" --draft --verify-tag --generate-notes \
+              --title "Menu Hub $RELEASE_TAG"
           else
-            gh release create "$GITHUB_REF_NAME" --draft --prerelease --verify-tag --generate-notes \
-              --title "Menu Hub $GITHUB_REF_NAME — Unsigned Preview" \
+            gh release create "$RELEASE_TAG" --draft --prerelease --verify-tag --generate-notes \
+              --title "Menu Hub $RELEASE_TAG — Unsigned Preview" \
               --notes "Unsigned preview: Apple notarization credentials were not configured. Choose arm64 for Apple Silicon or x86_64 for Intel. macOS may require explicit approval in Privacy & Security."
           fi
-          gh release upload "$GITHUB_REF_NAME" "${ASSETS[@]}" --clobber
+          gh release upload "$RELEASE_TAG" "${ASSETS[@]}" --clobber
           printf '%s\n' "${ASSETS[@]##*/}" | sort > /tmp/expected-assets.txt
-          gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort > /tmp/remote-assets.txt
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | sort > /tmp/remote-assets.txt
           diff -u /tmp/expected-assets.txt /tmp/remote-assets.txt
           if [[ "$FORMAL_RELEASE" == "true" ]]; then
-            gh release edit "$GITHUB_REF_NAME" --draft=false --title "Menu Hub $GITHUB_REF_NAME"
+            gh release edit "$RELEASE_TAG" --draft=false --title "Menu Hub $RELEASE_TAG"
           else
-            gh release edit "$GITHUB_REF_NAME" --draft=false --prerelease \
-              --title "Menu Hub $GITHUB_REF_NAME — Unsigned Preview"
+            gh release edit "$RELEASE_TAG" --draft=false --prerelease \
+              --title "Menu Hub $RELEASE_TAG — Unsigned Preview"
           fi
