@@ -15,7 +15,7 @@ final class PermissionResetRunnerTests: XCTestCase {
 
         runner.start(arguments: ["reset", "Accessibility", "com.local.MenuHub"]) { completions.append($0) }
         await process.waitForReap()
-        await Task.yield()
+        await waitForCompletion { !completions.isEmpty }
 
         XCTAssertEqual(signals.values.map(\.0), [4242, 4242])
         XCTAssertEqual(signals.values.map(\.1), [SIGTERM, SIGKILL])
@@ -33,10 +33,17 @@ final class PermissionResetRunnerTests: XCTestCase {
 
         runner.start(arguments: ["reset", "Accessibility", "com.local.MenuHub"]) { completions.append($0) }
         await process.waitForReap()
-        await Task.yield()
+        await waitForCompletion { !completions.isEmpty }
 
         XCTAssertEqual(process.waitCount, 1)
         XCTAssertEqual(completions, [true])
+    }
+
+    private func waitForCompletion(_ completed: () -> Bool) async {
+        let deadline = ContinuousClock.now + .seconds(1)
+        while !completed(), ContinuousClock.now < deadline {
+            await Task.yield()
+        }
     }
 }
 
