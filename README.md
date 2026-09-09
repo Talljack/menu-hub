@@ -74,7 +74,7 @@ Repair Permission resets only Menu Hub's own `com.local.MenuHub` Accessibility e
 
 ## Language
 
-Menu Hub includes English and Simplified Chinese. Choose **Settings > General > Language** to use the system language, English, or 简体中文. Reopen a window after changing the language. Restart Menu Hub if text in an existing window has not refreshed.
+Menu Hub supports 10 languages: English, 简体中文, 繁體中文, 日本語, 한국어, Español, Français, Deutsch, Português (Brasil), and Русский. Choose **Settings > General > Language** to follow macOS or select a language explicitly. System Default matches supported regional variants (for example, `zh-TW` uses 繁體中文); unsupported system languages fall back to English. Reopen a window after changing the language, or restart Menu Hub if text in an existing window has not refreshed.
 
 ## Privacy and local data
 

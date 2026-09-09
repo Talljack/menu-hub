@@ -74,7 +74,7 @@ Menu Hub 使用 Swift 6、SwiftUI 和 AppKit 开发，只使用 macOS 公开 API
 
 ## 语言
 
-Menu Hub 支持英语和简体中文。在 **设置 > 通用 > 语言** 中可选择跟随系统、English 或简体中文。切换后重新打开窗口；如果已有窗口仍显示旧文字，请重启 Menu Hub。
+Menu Hub 支持 10 种语言：English、简体中文、繁體中文、日本語、한국어、Español、Français、Deutsch、Português (Brasil) 和 Русский。在 **设置 > 通用 > 语言** 中可跟随 macOS 或明确选择语言。“跟随系统”会匹配已支持的地区变体（例如 `zh-TW` 使用繁體中文）；系统语言尚未支持时会回退到 English。切换后请重新打开窗口；如果已有窗口仍显示旧文字，请重启 Menu Hub。
 
 ## 隐私与本地数据
 
