@@ -6,10 +6,49 @@ public enum AppearancePreference: String, Codable, Equatable, Sendable {
     case dark
 }
 
-public enum LanguagePreference: String, Codable, Equatable, Sendable {
+public enum LanguagePreference: String, Codable, Equatable, Hashable, Sendable {
     case system
     case simplifiedChinese = "zh-Hans"
+    case traditionalChinese = "zh-Hant"
     case english = "en"
+    case japanese = "ja"
+    case korean = "ko"
+    case spanish = "es"
+    case french = "fr"
+    case german = "de"
+    case brazilianPortuguese = "pt-BR"
+    case russian = "ru"
+
+    public static let supported: [Self] = [
+        .english,
+        .simplifiedChinese,
+        .traditionalChinese,
+        .japanese,
+        .korean,
+        .spanish,
+        .french,
+        .german,
+        .brazilianPortuguese,
+        .russian,
+    ]
+
+    public static let selectable: [Self] = [.system] + supported
+
+    public var nativeName: String {
+        switch self {
+        case .system: "System Default"
+        case .english: "English"
+        case .simplifiedChinese: "简体中文"
+        case .traditionalChinese: "繁體中文"
+        case .japanese: "日本語"
+        case .korean: "한국어"
+        case .spanish: "Español"
+        case .french: "Français"
+        case .german: "Deutsch"
+        case .brazilianPortuguese: "Português (Brasil)"
+        case .russian: "Русский"
+        }
+    }
 
     public static let zhHans = Self.simplifiedChinese
     public static let en = Self.english
