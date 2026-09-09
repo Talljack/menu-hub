@@ -135,7 +135,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .milliseconds(350))
                 if uiTestRuntime.showsOnboarding { self?.presentOnboarding() }
-                else { self?.togglePanel() }
+                else { self?.showPanelIfNeeded() }
             }
         } else if !defaults.bool(forKey: DefaultsKey.hasCompletedOnboarding) {
             Task { @MainActor [weak self] in
@@ -188,7 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        togglePanel()
+        showPanelIfNeeded()
         return true
     }
 
@@ -236,11 +236,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func togglePanel() {
-        guard let button = hubItem.button else { return }
         if popover.isShown {
             popover.performClose(nil)
             return
         }
+        showPanelIfNeeded()
+    }
+
+    private func showPanelIfNeeded() {
+        guard !popover.isShown, let button = hubItem.button else { return }
         permissionCoordinator.recheckPermission()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
