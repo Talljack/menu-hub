@@ -9,19 +9,19 @@
 "common.settings" = "Configuración";
 
 "statusMenu.hideItems" = "Ocultar elementos";
-"statusMenu.revealItems" = "Revelar artículos";
+"statusMenu.revealItems" = "Mostrar elementos";
 "statusMenu.hideMarker" = "Ocultar marcador de configuración";
 "statusMenu.showMarker" = "Mostrar marcador de configuración";
 "statusMenu.checkPermission" = "Verificar permiso de accesibilidad";
 "statusMenu.requestPermission" = "Solicitar permiso de accesibilidad…";
 "statusMenu.scan" = "Escanear elementos de menú accesibles";
 "statusMenu.setup" = "Configurar…";
-"statusMenu.manage" = "Administrar artículos…";
+"statusMenu.manage" = "Gestionar elementos…";
 "statusMenu.settings" = "Configuración…";
 "statusMenu.restore" = "Restaurar barra de menú";
 "statusMenu.quit" = "Salir del menú central";
 "statusMenu.settingsWindowTitle" = "Configuración del concentrador de menús";
-"statusMenu.managementWindowTitle" = "Administrar artículos";
+"statusMenu.managementWindowTitle" = "Gestionar elementos";
 "statusMenu.markerHelp" = "Mantenga presionada la tecla Comando y arrastre este marcador hacia la derecha de los elementos que desea ocultar.";
 
 "panel.searchPlaceholder" = "Buscar elementos de la barra de menú";
@@ -35,7 +35,7 @@
 "panel.favorites" = "Favoritos";
 "panel.recent" = "Usado recientemente";
 "panel.frequent" = "Utilizado con frecuencia";
-"panel.allItems" = "Todos los artículos";
+"panel.allItems" = "Todos los elementos";
 "panel.showInManagement" = "Mostrar en Gestión…";
 "panel.favorite" = "Favorito";
 "panel.unfavorite" = "Eliminar de favoritos";
@@ -69,10 +69,10 @@
 "panel.actionFailed" = "Acción fallida";
 "panel.completed" = "Completado";
 
-"capability.actionable" = "procesable";
+"capability.actionable" = "Accionable";
 "capability.openApp" = "Puede abrir la aplicación";
 "capability.unavailable" = "No disponible";
-"capability.actionableDetail" = "Elementos de la barra de menú que exponen una acción de prensa pública sobre accesibilidad";
+"capability.actionableDetail" = "Elementos de la barra de menús que ofrecen una acción pública de pulsación mediante Accesibilidad";
 "capability.openAppDetail" = "Abre la aplicación correspondiente cuando un clic de proxy no está disponible";
 "capability.unavailableDetail" = "Los elementos sin una interfaz pública confiable están claramente marcados";
 
@@ -186,7 +186,7 @@
 "settings.showCapabilities" = "Mostrar estado de capacidad";
 "settings.accessibilityAppearanceHint" = "Reducir transparencia y Reducir movimiento siempre siguen la configuración de Accesibilidad de macOS.";
 "settings.itemsDescription" = "Utilice la ventana de administración para buscar, editar alias y favoritos, asignar múltiples grupos, reordenar, ignorar o restaurar elementos e inspeccionar capacidades y errores.";
-"settings.openManagement" = "Abrir gestión de artículos...";
+"settings.openManagement" = "Abrir gestión de elementos…";
 "settings.openPanel" = "Panel abierto";
 "settings.hotKeyConflict" = "Este acceso directo ya lo utiliza otra aplicación. El atajo anterior permanece activo.";
 "settings.fixedShortcuts" = "Atajos fijos";

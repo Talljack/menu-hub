@@ -21,7 +21,7 @@
 "statusMenu.restore" = "Restaurer la barre de menus";
 "statusMenu.quit" = "Quitter le menu Hub";
 "statusMenu.settingsWindowTitle" = "Paramètres du hub de menu";
-"statusMenu.managementWindowTitle" = "Gérer les articles";
+"statusMenu.managementWindowTitle" = "Gérer les éléments";
 "statusMenu.markerHelp" = "Maintenez Commande et faites glisser ce marqueur à droite des éléments que vous souhaitez masquer.";
 
 "panel.searchPlaceholder" = "Rechercher des éléments dans la barre de menus";
@@ -35,7 +35,7 @@
 "panel.favorites" = "Favoris";
 "panel.recent" = "Récemment utilisé";
 "panel.frequent" = "Fréquemment utilisé";
-"panel.allItems" = "Tous les articles";
+"panel.allItems" = "Tous les éléments";
 "panel.showInManagement" = "Afficher dans Gestion…";
 "panel.favorite" = "Favoris";
 "panel.unfavorite" = "Supprimer des favoris";
@@ -72,7 +72,7 @@
 "capability.actionable" = "Actionnable";
 "capability.openApp" = "Peut ouvrir l'application";
 "capability.unavailable" = "Indisponible";
-"capability.actionableDetail" = "Éléments de la barre de menus qui exposent une action de presse publique sur l'accessibilité";
+"capability.actionableDetail" = "Éléments de la barre des menus qui proposent une action publique d'appui via Accessibilité";
 "capability.openAppDetail" = "Ouvre l'application correspondante lorsqu'un clic proxy n'est pas disponible";
 "capability.unavailableDetail" = "Les éléments sans interface publique fiable sont clairement marqués";
 

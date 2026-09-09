@@ -64,6 +64,28 @@ final class MenuHubUITests: XCTestCase {
         XCTAssertTrue(element(identifier: "hub.item.lark").exists)
     }
 
+    func testLongEuropeanLocalizationsRenderThePanel() {
+        let expectations = [
+            (language: "de", allItems: "Alle Elemente"),
+            (language: "fr", allItems: "Tous les éléments"),
+            (language: "pt-BR", allItems: "Todos os itens"),
+            (language: "ru", allItems: "Все элементы"),
+        ]
+
+        for expectation in expectations {
+            launch(
+                permission: "authorized",
+                catalog: "mixed",
+                language: expectation.language,
+                reset: true
+            )
+            XCTAssertTrue(element(identifier: "hub.search").waitForExistence(timeout: 5))
+            XCTAssertTrue(app.staticTexts[expectation.allItems].exists)
+            XCTAssertTrue(element(identifier: "hub.item.lark").exists)
+            app.terminate()
+        }
+    }
+
     func testFixtureCatalogPersistsAcrossRelaunch() {
         let suite = "persistence-\(UUID().uuidString)"
         launch(permission: "authorized", catalog: "mixed", language: "en", suite: suite, reset: true)

@@ -9,7 +9,7 @@
 "common.settings" = "Настройки";
 
 "statusMenu.hideItems" = "Скрыть элементы";
-"statusMenu.revealItems" = "Показать предметы";
+"statusMenu.revealItems" = "Показать элементы";
 "statusMenu.hideMarker" = "Скрыть маркер настройки";
 "statusMenu.showMarker" = "Показать маркер настройки";
 "statusMenu.checkPermission" = "Проверить доступ к Универсальному доступу";
@@ -35,7 +35,7 @@
 "panel.favorites" = "Избранное";
 "panel.recent" = "Недавно использованный";
 "panel.frequent" = "Часто используемый";
-"panel.allItems" = "Все предметы";
+"panel.allItems" = "Все элементы";
 "panel.showInManagement" = "Показать в управлении…";
 "panel.favorite" = "Любимый";
 "panel.unfavorite" = "Удалить из избранного";
@@ -133,7 +133,7 @@
 "management.clearSearchToReorder" = "Очистите поиск, чтобы изменить глобальный порядок.";
 "management.groupName" = "Название группы";
 "management.deleteGroup" = "Удалить группу";
-"management.search" = "Поиск предметов";
+"management.search" = "Поиск элементов";
 "management.selectItem" = "Выберите пункт строки меню";
 "management.rescan" = "Повторное сканирование";
 "management.newGroup" = "Новая группа";

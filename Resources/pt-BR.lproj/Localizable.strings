@@ -72,7 +72,7 @@
 "capability.actionable" = "Acionável";
 "capability.openApp" = "Pode abrir o aplicativo";
 "capability.unavailable" = "Indisponível";
-"capability.actionableDetail" = "Itens da barra de menu que expõem uma ação pública de imprensa sobre acessibilidade";
+"capability.actionableDetail" = "Itens da barra de menus que oferecem uma ação pública de pressionar via Acessibilidade";
 "capability.openAppDetail" = "Abre o aplicativo correspondente quando um clique de proxy não está disponível";
 "capability.unavailableDetail" = "Itens sem uma interface pública confiável estão claramente marcados";
 

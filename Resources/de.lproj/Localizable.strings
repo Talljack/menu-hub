@@ -35,7 +35,7 @@
 "panel.favorites" = "Favoriten";
 "panel.recent" = "Kürzlich verwendet";
 "panel.frequent" = "Häufig verwendet";
-"panel.allItems" = "Alle Artikel";
+"panel.allItems" = "Alle Elemente";
 "panel.showInManagement" = "In Management anzeigen…";
 "panel.favorite" = "Favorit";
 "panel.unfavorite" = "Aus Favoriten entfernen";
@@ -61,7 +61,7 @@
 "panel.defaultAction" = "Standardaktion";
 "panel.openHost" = "Öffnen Sie die Host-App";
 "panel.addToGroup" = "Zur Gruppe hinzufügen";
-"panel.ignoreItem" = "Ignorieren Sie diesen Artikel";
+"panel.ignoreItem" = "Dieses Element ignorieren";
 "panel.retest" = "Fähigkeit erneut testen";
 "panel.alias" = "Alias";
 "panel.aliasPlaceholder" = "Optionaler Alias";
@@ -72,7 +72,7 @@
 "capability.actionable" = "Bedienbar";
 "capability.openApp" = "Kann App öffnen";
 "capability.unavailable" = "Nicht verfügbar";
-"capability.actionableDetail" = "Menüleistenelemente, die eine öffentliche Aktion zur Barrierefreiheit anzeigen";
+"capability.actionableDetail" = "Menüleistenelemente mit öffentlicher Drücken-Aktion der Bedienungshilfen";
 "capability.openAppDetail" = "Öffnet die entsprechende App, wenn ein Proxy-Klick nicht verfügbar ist";
 "capability.unavailableDetail" = "Elemente ohne zuverlässige öffentliche Schnittstelle werden deutlich gekennzeichnet";
 
@@ -128,7 +128,7 @@
 "onboarding.scanComplete" = "Scan abgeschlossen";
 "onboarding.scanSummaryFormat" = "%1$@: %2$d insgesamt · %3$d umsetzbar · %4$d nur App · %5$d nicht verfügbar";
 
-"management.items" = "Artikel";
+"management.items" = "Elemente";
 "management.groups" = "Gruppen";
 "management.clearSearchToReorder" = "Löschen Sie die Suche, um die globale Reihenfolge zu ändern";
 "management.groupName" = "Gruppenname";
@@ -143,7 +143,7 @@
 "management.originalName" = "Ursprünglicher Name";
 "management.alias" = "Alias";
 "management.favorite" = "Favorit";
-"management.ignore" = "Ignorieren Sie diesen Artikel";
+"management.ignore" = "Dieses Element ignorieren";
 "management.capabilities" = "Fähigkeiten";
 "management.status" = "Status";
 "management.lastSeen" = "Zuletzt gesehen";
@@ -230,11 +230,11 @@
 "error.saveFailed" = "Änderungen können derzeit nicht gespeichert werden. Überprüfen Sie den verfügbaren Speicherplatz und versuchen Sie es erneut.";
 "error.scanFailed" = "Der Scan wurde nicht abgeschlossen. Versuchen Sie es später noch einmal.";
 "error.permissionDenied" = "Die Barrierefreiheitsberechtigung ist deaktiviert.";
-"error.staleItem" = "Der Artikel wurde verschoben. Scannen Sie die Menüleiste erneut.";
+"error.staleItem" = "Das Element wurde verschoben. Scannen Sie die Menüleiste erneut.";
 "error.actionUnsupported" = "Das Element stellt keine sichere Klickaktion bereit.";
-"error.targetUnresponsive" = "Der Artikel reagiert nicht. Versuchen Sie es später noch einmal.";
+"error.targetUnresponsive" = "Das Element reagiert nicht. Versuchen Sie es später erneut.";
 "error.launchFailed" = "Die Host-App konnte nicht geöffnet werden.";
-"error.actionFailed" = "Der Artikel konnte nicht ausgelöst werden.";
-"error.unavailable" = "Der Artikel kann derzeit nicht sicher ausgelöst werden.";
+"error.actionFailed" = "Das Element konnte nicht ausgelöst werden.";
+"error.unavailable" = "Das Element kann derzeit nicht sicher ausgelöst werden.";
 "error.permissionResetUnavailable" = "Der Eintrag zur Barrierefreiheit von Menu Hub konnte nicht zurückgesetzt werden. Versuchen Sie es später noch einmal.";
 "error.settingsUnavailable" = "Die Einstellungen sind vorübergehend nicht verfügbar.";
