@@ -2,89 +2,79 @@
 
 [English](README.md) | 简体中文
 
-Menu Hub 是一个原生 macOS 菜单栏管理工具。它通过始终可见的四瓣 Hub 图标打开紧凑面板，让你搜索、收藏、分组并触发支持的菜单栏项目。
+[下载最新版本](https://github.com/Talljack/menu-hub/releases/latest) · 需要 macOS 14 或更高版本 · 支持 Apple 芯片与 Intel
 
-工程使用 Swift 6、SwiftUI + AppKit，最低支持 macOS 14；不使用私有 API、Electron、代码注入、录屏权限、联网服务、分析 SDK 或云存储。
+Menu Hub 是一个原生 macOS 菜单栏管理工具。点击四瓣图标，即可搜索、识别、整理和触发当前运行 App 的菜单栏项目。
 
-> Menu Hub 当前为 MVP，尚不是经过 Apple 公证的公开发行版。准确验证状态和已知限制见 [MVP 对照验收](outputs/MVP-Comparison-Audit.md)。
+<p align="center">
+  <img src="docs/images/menu-hub-panel.png" alt="Menu Hub 在紧凑的 macOS 面板中显示可搜索的菜单栏 App" width="520">
+</p>
 
-## 使用方式
+Menu Hub 使用 Swift 6、SwiftUI 和 AppKit 开发，只使用 macOS 公开 API。不使用 Electron、代码注入、录屏权限、分析 SDK、云服务或账号系统。
 
-- 点击菜单栏中的四瓣 Hub 图标，打开或关闭主面板。
-- 按 `⌥M` 可从任意 App 切换面板；可在“设置 > 快捷键”中修改。
-- 输入文字搜索；`↑` / `↓` 选择，`Return` 执行默认动作，`⌘Return` 打开宿主 App，`⌘K` 打开动作菜单。
-- `⌘1` 到 `⌘9` 触发收藏，`⌘F` 聚焦搜索，`Esc` 清空搜索或关闭面板。
-- 按住 Option 点击 Hub 图标可收起或展开管理区域；右键可重新扫描、打开设置、恢复菜单栏或退出。
-- 面板支持收藏、最近使用、常用、自定义分组和全部项目。每一项都优先显示宿主 App 名称，避免仅凭相同图标难以区分。
+## 安装
 
-可触发项目优先执行 `AXPress`；不支持时可降级为打开已知宿主 App，无法处理的项目会禁用并显示原因。
+1. 打开 [GitHub 最新版本页面](https://github.com/Talljack/menu-hub/releases/latest)。
+2. 根据 Mac 芯片下载对应 DMG：
 
-## Accessibility 授权
+   | Mac | 下载文件 |
+   | --- | --- |
+   | Apple M1、M2、M3、M4 或更新芯片 | `Menu-Hub-*-macos-arm64.dmg` |
+   | Intel 处理器 | `Menu-Hub-*-macos-x86_64.dmg` |
 
-首次运行会先解释用途，再显示 macOS 权限提示。你也可以跳过授权，继续使用“仅打开 App”的降级模式。
+   不确定芯片类型时，打开“苹果菜单 > 关于本机”，查看“芯片”或“处理器”。
+3. 打开 DMG，将 **Menu Hub** 拖入“应用程序”。
+4. 推出 DMG，然后从“应用程序”或 Spotlight 启动 Menu Hub。
+5. 在菜单栏中寻找四瓣 Menu Hub 图标。Menu Hub 是菜单栏 App，因此不会显示 Dock 图标，也不会自动打开普通主窗口。
 
-授权步骤：
+同一个 Release 页面还提供 ZIP 和 SHA-256 校验文件。正式版本均使用 Developer ID 签名、经过 Apple 公证，并可通过 Gatekeeper 检查。
 
-1. 打开首次设置，或进入“设置 > 权限与隐私”。
-2. 点击“打开系统设置”。
-3. 在“隐私与安全性 > 辅助功能”中开启 Menu Hub。
-4. 回到 Menu Hub；应用重新激活时会自动复查权限。
+升级时先退出正在运行的 Menu Hub，再将新版本拖入“应用程序”并替换旧版本。
 
-如果系统设置已开启但应用仍报告无权限，可选择“修复授权”。确认后，Menu Hub 只重置自身 `com.local.MenuHub` 的 Accessibility 记录并重新打开系统设置，不会重置其他 App。
+## 授予辅助功能权限
 
-## 管理与设置
+辅助功能权限用于发现支持的菜单栏项目，并执行这些项目原本的点击动作。不授权时，Menu Hub 仍可使用，但会降级为功能有限的 App 启动器模式。Menu Hub 不需要录屏权限。
 
-项目管理支持搜索、别名、收藏、多分组、排序、忽略/恢复、能力重测、最近发现时间和本地错误信息；删除分组支持撤销。
+1. 启动 Menu Hub 并按照首次运行说明操作，或打开 **设置 > 权限与隐私**。
+2. 点击 **打开系统设置**。
+3. 进入 **隐私与安全性 > 辅助功能**，开启 **Menu Hub**。
+4. 如果列表中没有 Menu Hub，点击 `+`，选择 `/Applications/Menu Hub.app`。
+5. 返回 Menu Hub。App 再次激活时会自动复查权限并重新扫描。
 
-设置包含通用、外观、项目与分组、快捷键、权限与隐私、诊断六个区域，支持登录时启动、恢复上次收起状态、面板行为、跟随系统/浅色/深色、列表/网格、语言、快捷键录制、本地数据控制、脱敏诊断导出和菜单栏恢复。
+如果系统开关已经打开，但 Menu Hub 仍提示没有权限：
 
-界面支持“系统默认、English、简体中文”。切换语言后请重新打开窗口；如仍有旧文字，可重启 Menu Hub。
+1. 打开 **Menu Hub > 设置 > 权限与隐私**。
+2. 选择 **修复授权** 并确认。
+3. 在系统设置中重新开启 Menu Hub，然后重新打开面板或点击 **重新扫描**。
 
-## 本地构建与测试
+“修复授权”只会重置 Menu Hub 自己的 `com.local.MenuHub` 辅助功能记录，不会修改其他 App 的权限。
 
-安装 XcodeGen 和 Swift 6 工具链后运行：
+## 使用 Menu Hub
 
-```sh
-xcodegen generate
-swift test
-xcodebuild test -project MenuHub.xcodeproj -scheme MenuHub -destination 'platform=macOS'
-xcodebuild -project MenuHub.xcodeproj -scheme MenuHub -configuration Release \
-  -derivedDataPath work/DerivedData clean build
-open work/DerivedData/Build/Products/Release/MenuHub.app
-```
+- 点击菜单栏中的四瓣图标，打开或关闭面板。
+- 在任意 App 中按 `⌥M` 切换面板。如果快捷键冲突，可在 **设置 > 快捷键** 中修改。
+- 输入 App 名称或项目名称进行搜索。每个结果都会优先显示宿主 App 名称，避免仅凭相似图标难以区分。
+- 点击项目可执行原有菜单栏动作。如果无法直接触发，Menu Hub 可以改为打开已识别的宿主 App。
+- 按住 Option 点击 Menu Hub 图标，可收起或展开受管理的菜单栏区域。
+- 右键点击图标，可重新扫描、打开设置、恢复菜单栏或退出。
+- 收藏、最近使用、常用、自定义分组、别名、排序和忽略项目，可在 **设置 > 项目与分组** 中管理。
 
-Menu Hub 是 `LSUIElement` 菜单栏 App，不显示 Dock 图标或普通主窗口。启动后请在菜单栏寻找 Hub 图标，或按 `⌥M`。
+### 键盘操作
 
-## 版本与 CI 发布
+| 快捷键 | 功能 |
+| --- | --- |
+| `⌥M` | 全局打开或关闭 Menu Hub |
+| `↑` / `↓` | 移动选择 |
+| `Return` | 执行所选项目的默认动作 |
+| `⌘Return` | 打开所选项目的宿主 App |
+| `⌘K` | 打开所选项目的动作菜单 |
+| `⌘1` 到 `⌘9` | 触发收藏项目 |
+| `⌘F` | 聚焦搜索框 |
+| `Esc` | 先清空搜索，再关闭面板 |
 
-根目录 `VERSION` 是版本号唯一来源，必须与 `project.yml` 中的 `MARKETING_VERSION` 一致。本地生成经过测试的 Apple Silicon（`arm64`）和 Intel（`x86_64`）双架构构建：
+## 语言
 
-```sh
-./scripts/build-release.sh
-```
-
-每次推送或合并到 `main` 都会运行 [.github/workflows/release.yml](.github/workflows/release.yml)，执行测试、分别构建两种芯片架构，并上传对应的 DMG 和 ZIP 构件。
-
-推送 `v*` 标签后一定会创建可见的 GitHub Release。未配置 Apple 凭据时会明确标记为未签名预发布版，文件名包含 `-UNSIGNED`；以下 Secrets 全部配置后，CI 才会生成 Developer ID 签名、Apple 公证并 stapling 的正式版本：
-
-- `FORMAL_RELEASE_ENABLED`（仅在正式 UI 发布门禁可用后设为 `true`）
-- `APPLE_CERTIFICATE_P12_BASE64`
-- `APPLE_CERTIFICATE_PASSWORD`
-- `APPLE_SIGNING_IDENTITY`
-- `APP_STORE_CONNECT_API_KEY_P8_BASE64`
-- `APP_STORE_CONNECT_KEY_ID`
-- `APP_STORE_CONNECT_ISSUER_ID`
-
-Apple 芯片 Mac 下载 `arm64`，Intel Mac 下载 `x86_64`。每种架构都同时提供可拖入“应用程序”的 DMG，以及包含 `Menu Hub.app` 的 ZIP。
-
-正式发布 Secrets 应保存在受保护的 GitHub `release` environment 中。Tag 任务需要在那里人工批准，而且 Tag 必须指向当前 `main` 提交。
-
-Phase 0 探针仍可用于验证公开 API 的真实兼容性：
-
-```sh
-swift run FeasibilityProbe --output FeasibilityReport.md
-swift run FeasibilityProbe --press-index 0 --output FeasibilityReport.md
-```
+Menu Hub 支持英语和简体中文。在 **设置 > 通用 > 语言** 中可选择跟随系统、English 或简体中文。切换后重新打开窗口；如果已有窗口仍显示旧文字，请重启 Menu Hub。
 
 ## 隐私与本地数据
 
@@ -94,16 +84,45 @@ swift run FeasibilityProbe --press-index 0 --output FeasibilityReport.md
 ~/Library/Application Support/Menu Hub/
 ```
 
-Catalog 使用带 schema 版本的 Codable JSON、原子替换和本地备份恢复。诊断只在用户选择保存位置后导出，并删除或哈希主目录、用户名、搜索文字和稳定项目标识。
+Menu Hub 不会上传分析数据或用户数据。诊断信息只会在你主动选择保存位置后导出，并会删除或哈希主目录、用户名、搜索文字和稳定项目标识。
 
 ## 公开 API 限制
 
-macOS 没有公开 API 可以保证枚举、移动、隐藏并代理所有第三方菜单栏项目。Menu Hub 使用透明可变宽度 `NSStatusItem` 管理布局空间，并通过 Accessibility API 发现和触发支持的项目。
+macOS 没有公开 API 可以保证发现、移动、隐藏和代理触发所有第三方菜单栏项目。Menu Hub 使用透明可变宽度 `NSStatusItem` 管理布局空间，并通过辅助功能 API 发现和触发项目。
 
-- 时钟、控制中心等系统管理项目不属于隐藏承诺。
-- 缺少稳定 Accessibility 元数据或 `AXPress` 的项目可能只能打开宿主 App，或保持不可用。
-- 前台 App 菜单过长、刘海屏和多显示器变化仍可能导致 macOS 裁切项目；布局不确定时 Menu Hub 会恢复到安全展开状态。
-- 最终兼容性必须在目标 macOS、显示器布局和第三方 App 版本上实机验证。
+- 时钟、控制中心等系统管理项目不属于隐藏保证范围。
+- 缺少稳定辅助功能元数据或 `AXPress` 支持的项目，可能只能打开宿主 App，或保持不可用。
+- 前台 App 菜单过长、刘海屏和显示器变化仍可能让 macOS 裁切项目。布局状态不确定时，Menu Hub 会恢复到安全展开状态。
+- 兼容性可能受到 macOS 版本、显示器排列和第三方 App 版本影响。
+
+## 本地构建与测试
+
+安装 XcodeGen 和 Swift 6 工具链后运行：
+
+```sh
+xcodegen generate
+swift test
+xcodebuild test \
+  -project MenuHub.xcodeproj \
+  -scheme MenuHub \
+  -destination 'platform=macOS' \
+  -skip-testing:MenuHubUITests \
+  CODE_SIGNING_ALLOWED=NO
+```
+
+生成 Apple Silicon 与 Intel 原生发布构件：
+
+```sh
+./scripts/build-release.sh
+```
+
+根目录 `VERSION` 是版本号唯一来源，必须与 `project.yml` 中的 `MARKETING_VERSION` 一致。
+
+## CI 发布
+
+每次推送或合并到 `main` 都会运行 [.github/workflows/release.yml](.github/workflows/release.yml)，执行测试、构建两种芯片架构，并上传对应的 DMG 和 ZIP 构件。
+
+`v*` 标签会生成 GitHub Release。受保护的 `release` 环境配置完成后，CI 会导入 Developer ID 证书、签名两个 App、提交 Apple 公证、装订公证票据、验证全部 8 个发布文件，并在批准后公开发布。
 
 ## 项目文档
 
