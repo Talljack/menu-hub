@@ -29,12 +29,20 @@ enum LocalizationController {
         resourceBundle = .main
         #endif
 
-        let language = preference == .system
-            ? resourceBundle.preferredLocalizations.first ?? LanguagePreference.english.rawValue
-            : preference.rawValue
-        guard let path = resourceBundle.path(forResource: language, ofType: "lproj"),
-              let bundle = Bundle(path: path) else { return resourceBundle }
-        return bundle
+        let language = LanguageResolver.resourceIdentifier(for: preference)
+        if let path = resourceBundle.path(forResource: language, ofType: "lproj"),
+           let bundle = Bundle(path: path) {
+            return bundle
+        }
+
+        if let path = resourceBundle.path(
+            forResource: LanguagePreference.english.rawValue,
+            ofType: "lproj"
+        ), let bundle = Bundle(path: path) {
+            return bundle
+        }
+
+        return resourceBundle
     }
 
     private static func locale(for preference: LanguagePreference) -> Locale {

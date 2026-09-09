@@ -27,4 +27,24 @@ struct LanguagePreferenceTests {
         #expect(LanguagePreference(rawValue: "en") == .english)
         #expect(LanguagePreference(rawValue: "zh-Hans") == .simplifiedChinese)
     }
+
+    @Test func explicitPreferencesResolveDirectly() {
+        for preference in LanguagePreference.supported {
+            #expect(
+                LanguageResolver.resourceIdentifier(
+                    for: preference,
+                    preferredLanguages: ["ar"]
+                ) == preference.rawValue
+            )
+        }
+    }
+
+    @Test func systemPreferenceMatchesRegionsAndFallsBackToEnglish() {
+        #expect(LanguageResolver.resourceIdentifier(for: .system, preferredLanguages: ["zh-TW"]) == "zh-Hant")
+        #expect(LanguageResolver.resourceIdentifier(for: .system, preferredLanguages: ["es-MX"]) == "es")
+        #expect(LanguageResolver.resourceIdentifier(for: .system, preferredLanguages: ["fr-CA"]) == "fr")
+        #expect(LanguageResolver.resourceIdentifier(for: .system, preferredLanguages: ["pt-PT"]) == "pt-BR")
+        #expect(LanguageResolver.resourceIdentifier(for: .system, preferredLanguages: ["ar"]) == "en")
+        #expect(LanguageResolver.resourceIdentifier(for: .system, preferredLanguages: []) == "en")
+    }
 }
