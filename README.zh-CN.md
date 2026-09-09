@@ -1,6 +1,6 @@
 # Menu Hub for macOS
 
-[English](README.md) | 简体中文
+[English](README.md) · 简体中文 · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português (Brasil)](README.pt-BR.md) · [Русский](README.ru.md)
 
 [下载最新版本](https://github.com/Talljack/menu-hub/releases/latest) · 需要 macOS 14 或更高版本 · 支持 Apple 芯片与 Intel
 
