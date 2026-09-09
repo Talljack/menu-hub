@@ -17,6 +17,14 @@ let package = Package(
             resources: [
                 .process("../../Resources/en.lproj"),
                 .process("../../Resources/zh-Hans.lproj"),
+                .process("../../Resources/zh-Hant.lproj"),
+                .process("../../Resources/ja.lproj"),
+                .process("../../Resources/ko.lproj"),
+                .process("../../Resources/es.lproj"),
+                .process("../../Resources/fr.lproj"),
+                .process("../../Resources/de.lproj"),
+                .process("../../Resources/pt-BR.lproj"),
+                .process("../../Resources/ru.lproj"),
             ]
         ),
         .executableTarget(name: "FeasibilityProbe", dependencies: ["MenuHubCore"]),
