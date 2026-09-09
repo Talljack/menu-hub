@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+@testable import MenuHubCore
 
 struct LocalizationCompletenessTests {
     private var repositoryRoot: URL {
@@ -9,12 +10,23 @@ struct LocalizationCompletenessTests {
             .deletingLastPathComponent()
     }
 
-    @Test func englishAndSimplifiedChineseContainTheSameKeys() throws {
-        let english = try strings(at: "Resources/en.lproj/Localizable.strings")
-        let chinese = try strings(at: "Resources/zh-Hans.lproj/Localizable.strings")
-
+    @Test func everySupportedLocalizationMatchesEnglish() throws {
+        let english = try strings(for: .english)
         #expect(!english.isEmpty)
-        #expect(Set(english.keys) == Set(chinese.keys))
+
+        for language in LanguagePreference.supported {
+            let translation = try strings(for: language)
+            #expect(
+                Set(translation.keys) == Set(english.keys),
+                "Key mismatch for \(language.rawValue)"
+            )
+            for key in english.keys.sorted() {
+                #expect(
+                    placeholders(in: translation[key, default: ""]) == placeholders(in: english[key, default: ""]),
+                    "Placeholder mismatch for \(language.rawValue):\(key)"
+                )
+            }
+        }
     }
 
     @Test func requiredUserFacingAreasAreCovered() throws {
@@ -38,5 +50,17 @@ struct LocalizationCompletenessTests {
             throw CocoaError(.propertyListReadCorrupt)
         }
         return strings
+    }
+
+    private func strings(for language: LanguagePreference) throws -> [String: String] {
+        try strings(at: "Resources/\(language.rawValue).lproj/Localizable.strings")
+    }
+
+    private func placeholders(in value: String) -> [String] {
+        let expression = try! NSRegularExpression(pattern: #"%(?:(\d+)\$)?(?:@|d)"#)
+        let range = NSRange(value.startIndex..., in: value)
+        return expression.matches(in: value, range: range).compactMap { match in
+            Range(match.range, in: value).map { String(value[$0]) }
+        }.sorted()
     }
 }

@@ -33,6 +33,22 @@ targets:
         buildPhase: resources
       - path: Resources/zh-Hans.lproj
         buildPhase: resources
+      - path: Resources/zh-Hant.lproj
+        buildPhase: resources
+      - path: Resources/ja.lproj
+        buildPhase: resources
+      - path: Resources/ko.lproj
+        buildPhase: resources
+      - path: Resources/es.lproj
+        buildPhase: resources
+      - path: Resources/fr.lproj
+        buildPhase: resources
+      - path: Resources/de.lproj
+        buildPhase: resources
+      - path: Resources/pt-BR.lproj
+        buildPhase: resources
+      - path: Resources/ru.lproj
+        buildPhase: resources
     dependencies:
       - target: MenuHubCore
     info:
