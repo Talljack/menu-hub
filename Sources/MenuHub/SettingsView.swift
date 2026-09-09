@@ -153,9 +153,10 @@ struct SettingsView: View {
                 preferenceToggle(L("settings.closeAfterAction"), \.closeAfterSuccessfulTrigger)
                 preferenceToggle(L("settings.automaticScan"), \.automaticScanning)
                 Picker(L("settings.language"), selection: languageBinding) {
-                    Text(L("settings.languageSystem")).tag(LanguagePreference.system)
-                    Text(L("settings.languageChinese")).tag(LanguagePreference.simplifiedChinese)
-                    Text(L("settings.languageEnglish")).tag(LanguagePreference.english)
+                    ForEach(SettingsLanguageOptions.all, id: \.self) { preference in
+                        Text(preference == .system ? L("settings.languageSystem") : preference.nativeName)
+                            .tag(preference)
+                    }
                 }
                 Text(L("settings.languageRestartHint")).font(.caption).foregroundStyle(.secondary)
             }
