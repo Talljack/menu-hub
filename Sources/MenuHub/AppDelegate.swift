@@ -126,6 +126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         registerPersistedHotKeyWhenLoaded()
         #endif
         permissionCoordinator.start()
+        panelModel.startBackgroundUpdates()
         observeDiagnostics()
         observeSafetyEvents()
         spacerItem.length = state.currentWidth
@@ -162,6 +163,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         permissionCoordinator.stop()
+        panelModel.stopMonitoring()
         panelModel.shutdown()
         hotKeyController.shutdown()
         let wasHidden = state.visibility == .hidden
@@ -215,6 +217,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func handleSafetyEvent() {
         revealItems(immediate: true)
+        panelModel.applicationSetDidChange()
     }
 
     @objc private func handleApplicationSetChange() {

@@ -94,6 +94,20 @@ enum PanelOperationState: Equatable {
     case invoking(itemID: String)
 }
 
+enum PanelMonitoringMode: Equatable {
+    case stopped
+    case background
+    case foreground
+
+    var interval: TimeInterval? {
+        switch self {
+        case .stopped: nil
+        case .background: 5
+        case .foreground: 1
+        }
+    }
+}
+
 enum PanelContentState: Equatable {
     case loading, scanning, empty, content
 
@@ -155,6 +169,7 @@ final class HubPanelModel: ObservableObject {
     @Published var actionMenuPresentationID: HubItemPresentationID?
     @Published private(set) var lastFailedItemID: String?
     @Published private(set) var lastSucceededItemID: String?
+    @Published private(set) var unreadBadgePresentation: UnreadBadgePresentation = .hidden
 
     // Compatibility surface for the phase-0 view. The published states above are authoritative.
     @Published private(set) var items: [HubPanelItem] = []
@@ -191,7 +206,8 @@ final class HubPanelModel: ObservableObject {
     private var invocationGeneration = 0
     private var invocationTask: Task<Void, Never>?
     private var liveUpdateCancellation: (any PanelLiveUpdateCancellation)?
-    private var liveUpdatesActive = false
+    private(set) var monitoringMode: PanelMonitoringMode = .stopped
+    private var liveUpdatesActive: Bool { monitoringMode != .stopped }
     private var liveScanGeneration = 0
     private var inFlightLiveScanTask: Task<Void, Never>?
     private var successFeedbackTask: Task<Void, Never>?
@@ -229,6 +245,11 @@ final class HubPanelModel: ObservableObject {
             guard let self else { return }
             if operationState == .loading { operationState = .idle }
             rebuildSnapshot()
+            if liveUpdatesActive, controller.document.preferences.automaticScanning, permissionGranted,
+               inFlightLiveScanTask == nil, !controller.isScanning {
+                startLiveScan(fullDiscovery: true)
+                scheduleLiveUpdatesIfNeeded()
+            }
         }
     }
 
@@ -273,7 +294,7 @@ final class HubPanelModel: ObservableObject {
 
     func startLiveUpdates() {
         stopLiveUpdates()
-        liveUpdatesActive = true
+        monitoringMode = .foreground
         guard controller.document.preferences.automaticScanning else { return }
         let wasAuthorized = permissionGranted
         guard revalidateAccessibilityTrust(), wasAuthorized else { return }
@@ -282,7 +303,7 @@ final class HubPanelModel: ObservableObject {
     }
 
     func stopLiveUpdates() {
-        liveUpdatesActive = false
+        monitoringMode = .stopped
         liveUpdateCancellation?.cancel()
         liveUpdateCancellation = nil
         liveScanGeneration += 1
@@ -292,12 +313,69 @@ final class HubPanelModel: ObservableObject {
         Task { [controller] in await controller.flushPendingScanPersistence() }
     }
 
+    func startBackgroundUpdates() {
+        guard monitoringMode == .stopped else {
+            setMonitoringMode(.background)
+            return
+        }
+        monitoringMode = .background
+        guard controller.document.preferences.automaticScanning else {
+            unreadBadgePresentation = .hidden
+            return
+        }
+        let wasAuthorized = permissionGranted
+        guard revalidateAccessibilityTrust(), wasAuthorized else {
+            unreadBadgePresentation = .hidden
+            return
+        }
+        if operationState != .loading, inFlightLiveScanTask == nil, !controller.isScanning {
+            startLiveScan(fullDiscovery: true)
+        }
+        scheduleLiveUpdatesIfNeeded()
+    }
+
+    func panelDidAppear() {
+        if monitoringMode == .stopped {
+            monitoringMode = .foreground
+            guard controller.document.preferences.automaticScanning, permissionGranted else { return }
+            startLiveScan(fullDiscovery: true)
+        } else {
+            setMonitoringMode(.foreground)
+        }
+        scheduleLiveUpdatesIfNeeded()
+    }
+
+    func panelDidDisappear() {
+        if monitoringMode == .stopped {
+            startBackgroundUpdates()
+        } else {
+            setMonitoringMode(.background)
+        }
+    }
+
+    func stopMonitoring() { stopLiveUpdates() }
+
+    private func setMonitoringMode(_ mode: PanelMonitoringMode) {
+        guard mode != monitoringMode else { return }
+        liveUpdateCancellation?.cancel()
+        liveUpdateCancellation = nil
+        monitoringMode = mode
+        if mode == .stopped {
+            unreadBadgePresentation = .hidden
+            return
+        }
+        scheduleLiveUpdatesIfNeeded()
+    }
+
     private func scheduleLiveUpdatesIfNeeded() {
-        guard liveUpdatesActive, permissionGranted, liveUpdateCancellation == nil else { return }
-        liveUpdateCancellation = liveUpdateScheduler.schedule(every: 1) { [weak self] in
+        guard liveUpdatesActive, permissionGranted, liveUpdateCancellation == nil,
+              lastAutomaticScanningPreference ?? controller.document.preferences.automaticScanning,
+              let interval = monitoringMode.interval else { return }
+        liveUpdateCancellation = liveUpdateScheduler.schedule(every: interval) { [weak self] in
             guard let self, self.liveUpdatesActive, self.permissionGranted,
                   self.inFlightLiveScanTask == nil && !self.controller.isScanning else { return }
-            let fullDiscovery = self.nextFullDiscoveryAt.map { self.now() >= $0 } ?? true
+            let fullDiscovery = self.monitoringMode == .foreground
+                && (self.nextFullDiscoveryAt.map { self.now() >= $0 } ?? true)
             self.startLiveScan(fullDiscovery: fullDiscovery)
         }
     }
@@ -477,7 +555,8 @@ final class HubPanelModel: ObservableObject {
 
     func prepareForTermination() async {
         permissionEffectHandler.cancelAccessibilityReset()
-        liveUpdatesActive = false
+        monitoringMode = .stopped
+        unreadBadgePresentation = .hidden
         cancelAllAccessibilityWork()
         await controller.flushPendingScanPersistence()
     }
@@ -488,6 +567,7 @@ final class HubPanelModel: ObservableObject {
         permissionState = transition.state
         if permissionGranted { scheduleLiveUpdatesIfNeeded() }
         else {
+            unreadBadgePresentation = .hidden
             if wasAuthorized { cancelAllAccessibilityWork() }
         }
         rebuildSnapshot()
@@ -560,9 +640,10 @@ final class HubPanelModel: ObservableObject {
 
     private func observeController() {
         controller.$document.combineLatest(controller.$runtimeSnapshots)
-            .sink { [weak self] document, _ in
+            .sink { [weak self] document, runtimeSnapshots in
                 guard let self else { return }
                 self.rebuildSnapshot()
+                self.rebuildUnreadBadge(document: document, runtimeSnapshots: runtimeSnapshots)
                 let enabled = document.preferences.automaticScanning
                 guard self.lastAutomaticScanningPreference != enabled else { return }
                 self.lastAutomaticScanningPreference = enabled
@@ -603,6 +684,7 @@ final class HubPanelModel: ObservableObject {
             }
             scheduleLiveUpdatesIfNeeded()
         } else {
+            unreadBadgePresentation = .hidden
             liveUpdateCancellation?.cancel()
             liveUpdateCancellation = nil
             liveScanGeneration += 1
@@ -612,6 +694,21 @@ final class HubPanelModel: ObservableObject {
             controller.invalidateAccessibilityWork()
             Task { [controller] in await controller.flushPendingScanPersistence() }
         }
+    }
+
+    private func rebuildUnreadBadge(
+        document: CatalogDocument? = nil,
+        runtimeSnapshots: [String: AccessibilitySnapshot]? = nil
+    ) {
+        let document = document ?? controller.document
+        guard permissionGranted, document.preferences.automaticScanning else {
+            unreadBadgePresentation = .hidden
+            return
+        }
+        unreadBadgePresentation = UnreadBadgeAggregator.presentation(
+            records: document.items,
+            snapshots: runtimeSnapshots ?? controller.runtimeSnapshots
+        )
     }
 
     private func rebuildSnapshot() {
