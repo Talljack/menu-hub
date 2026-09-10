@@ -68,6 +68,7 @@ public struct MenuBarItemRecord: Codable, Identifiable, Equatable, Sendable {
     public var successfulInvocations: [Date]
     public var lastError: AccessibilityDomainError?
     public var isIgnored: Bool
+    public var unreadBadgePreference: UnreadBadgePreference
 
     public init(
         id: String? = nil,
@@ -82,7 +83,8 @@ public struct MenuBarItemRecord: Codable, Identifiable, Equatable, Sendable {
         lastSeenAt: Date,
         successfulInvocations: [Date] = [],
         lastError: AccessibilityDomainError? = nil,
-        isIgnored: Bool = false
+        isIgnored: Bool = false,
+        unreadBadgePreference: UnreadBadgePreference = .automatic
     ) {
         self.id = id ?? identity.stableID
         self.identity = identity
@@ -97,6 +99,7 @@ public struct MenuBarItemRecord: Codable, Identifiable, Equatable, Sendable {
         self.successfulInvocations = successfulInvocations
         self.lastError = lastError
         self.isIgnored = isIgnored
+        self.unreadBadgePreference = unreadBadgePreference
     }
 
     public var displayName: String {
@@ -104,6 +107,42 @@ public struct MenuBarItemRecord: Codable, Identifiable, Equatable, Sendable {
             return identity.originalName
         }
         return alias
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case identity
+        case hostName
+        case hostBundleIdentifier
+        case alias
+        case capability
+        case isFavorite
+        case groupIDs
+        case manualOrder
+        case lastSeenAt
+        case successfulInvocations
+        case lastError
+        case isIgnored
+        case unreadBadgePreference
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        identity = try container.decode(MenuBarItemIdentity.self, forKey: .identity)
+        hostName = try container.decode(String.self, forKey: .hostName)
+        hostBundleIdentifier = try container.decodeIfPresent(String.self, forKey: .hostBundleIdentifier)
+        alias = try container.decodeIfPresent(String.self, forKey: .alias)
+        capability = try container.decode(ItemCapability.self, forKey: .capability)
+        isFavorite = try container.decode(Bool.self, forKey: .isFavorite)
+        groupIDs = try container.decode([UUID].self, forKey: .groupIDs)
+        manualOrder = try container.decode(Int.self, forKey: .manualOrder)
+        lastSeenAt = try container.decode(Date.self, forKey: .lastSeenAt)
+        successfulInvocations = try container.decode([Date].self, forKey: .successfulInvocations)
+        lastError = try container.decodeIfPresent(AccessibilityDomainError.self, forKey: .lastError)
+        isIgnored = try container.decode(Bool.self, forKey: .isIgnored)
+        let rawPreference = try container.decodeIfPresent(String.self, forKey: .unreadBadgePreference)
+        unreadBadgePreference = rawPreference.flatMap(UnreadBadgePreference.init(rawValue:)) ?? .automatic
     }
 }
 
