@@ -162,29 +162,41 @@ struct HubPanelView: View {
         )
         return LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8)], spacing: 8) {
             ForEach(gridItems) { item in
-                Button {
-                    model.selectionID = item.id
-                    model.invoke(item)
-                } label: {
-                    VStack(spacing: 5) {
-                        Group {
-                            if let icon = item.hostIcon { Image(nsImage: icon).resizable().scaledToFit() }
-                            else { Image(systemName: "app.dashed").resizable().scaledToFit().foregroundStyle(.secondary) }
+                let presentationID = HubItemPresentationID.canonical(itemID: item.id)
+                HubItemRow(
+                    item: item,
+                    isSelected: model.selectionID == item.id,
+                    isInvoking: model.operationState == .invoking(itemID: item.id),
+                    hasFailure: model.lastFailedItemID == item.id,
+                    hasSucceeded: model.lastSucceededItemID == item.id,
+                    isActionMenuRequested: model.actionMenuPresentationID == presentationID,
+                    actionMenuDidDismiss: {
+                        if model.actionMenuPresentationID == presentationID {
+                            model.actionMenuPresentationID = nil
                         }
-                        .frame(width: 28, height: 28)
-                        Text(item.primaryTitle).font(.caption).lineLimit(2).multilineTextAlignment(.center)
-                        if model.catalogController.document.preferences.showCapabilities {
-                            Text(item.secondaryTitle).font(.caption2).foregroundStyle(.secondary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 76)
-                }
-                .buttonStyle(.plain)
-                .disabled(!item.canInvoke)
-                .contextMenu {
-                    Button(L("panel.showInManagement")) { model.openManagement(itemID: item.id) }
-                    Button(L(item.record.isFavorite ? "panel.unfavorite" : "panel.favorite")) { model.toggleFavorite(item) }
-                }
+                    },
+                    canOpenHost: model.canOpenHost(item),
+                    groups: model.snapshot.customGroups.map { group in
+                        HubItemActionGroup(
+                            id: group.id,
+                            name: group.name,
+                            isMember: item.record.groupIDs.contains(group.id)
+                        )
+                    },
+                    action: { model.selectionID = item.id; model.invoke(item) },
+                    openHost: { model.openHost(item) },
+                    toggleFavorite: { model.toggleFavorite(item) },
+                    saveAlias: { alias in Task { await model.setAlias(alias, for: item) } },
+                    setMembership: { groupID, member in
+                        Task { await model.setMembership(member, groupID: groupID, for: item) }
+                    },
+                    ignore: { Task { await model.setIgnored(true, for: item) } },
+                    retestCapability: { model.retestCapability() },
+                    openManagement: { model.openManagement(itemID: item.id) },
+                    showsCapability: model.catalogController.document.preferences.showCapabilities,
+                    layoutStyle: .grid
+                )
+                .id(presentationID.rawValue)
             }
         }
     }

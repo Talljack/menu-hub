@@ -10,6 +10,7 @@ struct UITestRuntime {
     let catalogName: String
     let language: LanguagePreference
     let appearance: AppearancePreference
+    let layout: LayoutPreference
     let showsOnboarding: Bool
     let resetFixture: Bool
     let directory: URL
@@ -22,6 +23,7 @@ struct UITestRuntime {
         let catalog = value(after: "-catalogFixture", in: arguments) ?? "mixed"
         let language = LanguagePreference(rawValue: value(after: "-uiTestLanguage", in: arguments) ?? "en") ?? .english
         let appearance = AppearancePreference(rawValue: value(after: "-uiTestAppearance", in: arguments) ?? "system") ?? .system
+        let layout = LayoutPreference(rawValue: value(after: "-uiTestLayout", in: arguments) ?? "compact") ?? .compact
         let rawSuite = value(after: "-uiTestSuite", in: arguments) ?? UUID().uuidString
         let suite = rawSuite.filter { $0.isLetter || $0.isNumber || $0 == "-" }
         let directory = FileManager.default.temporaryDirectory
@@ -32,6 +34,7 @@ struct UITestRuntime {
             catalogName: catalog,
             language: language,
             appearance: appearance,
+            layout: layout,
             showsOnboarding: value(after: "-showOnboarding", in: arguments) == "1",
             resetFixture: value(after: "-resetFixture", in: arguments) == "1",
             directory: directory
@@ -42,7 +45,7 @@ struct UITestRuntime {
 
     @MainActor
     func makeModel() -> HubPanelModel {
-        let fixture = Self.fixture(named: catalogName, language: language)
+        let fixture = Self.fixture(named: catalogName, language: language, layout: layout)
         let store = UITestCatalogStore(directory: directory, seed: fixture.document, reset: resetFixture)
         let controller = CatalogController(
             store: store,
@@ -66,7 +69,11 @@ struct UITestRuntime {
         return arguments[index + 1]
     }
 
-    private static func fixture(named name: String, language: LanguagePreference) -> (document: CatalogDocument, scanResult: AccessibilityScanResult) {
+    private static func fixture(
+        named name: String,
+        language: LanguagePreference,
+        layout: LayoutPreference
+    ) -> (document: CatalogDocument, scanResult: AccessibilityScanResult) {
         if name == "empty" { return (.empty, .init(snapshots: [], issues: [])) }
         if name == "error" {
             return (.empty, .init(snapshots: [], issues: [.targetUnresponsive(process: nil)]))
@@ -75,7 +82,7 @@ struct UITestRuntime {
         let host = language == .simplifiedChinese ? "飞书" : "Lark"
         if name == "launcher-only" {
             let item = record(id: "launcher", host: "Example Launcher", title: "Example Launcher", bundle: "com.example.launcher", capability: .launchOnly, order: 0)
-            return (CatalogDocument(items: [item], groups: [], preferences: preferences(language)), .init(snapshots: [], issues: []))
+            return (CatalogDocument(items: [item], groups: [], preferences: preferences(language, layout: layout)), .init(snapshots: [], issues: []))
         }
 
         let lark = record(id: "lark", host: host, title: "6", bundle: "com.larksuite.mac", capability: .full, favorite: true, order: 0)
@@ -83,14 +90,15 @@ struct UITestRuntime {
         let unavailable = record(id: "unavailable", host: "Example Utility", title: "Status", bundle: "com.example.utility", capability: .unavailable, order: 2)
         let snapshots = [snapshot(for: lark), snapshot(for: wechat)]
         return (
-            CatalogDocument(items: [lark, wechat, unavailable], groups: [], preferences: preferences(language)),
+            CatalogDocument(items: [lark, wechat, unavailable], groups: [], preferences: preferences(language, layout: layout)),
             .init(snapshots: snapshots, issues: [])
         )
     }
 
-    private static func preferences(_ language: LanguagePreference) -> Preferences {
+    private static func preferences(_ language: LanguagePreference, layout: LayoutPreference) -> Preferences {
         var value = Preferences.default
         value.language = language
+        value.layout = layout
         value.automaticScanning = true
         value.closeAfterSuccessfulTrigger = false
         return value
