@@ -103,11 +103,22 @@ final class MenuHubUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'hub.item.actions.'")).firstMatch.exists)
     }
 
+    func testIconGridKeyboardSelectionOpensSelectedItemActions() {
+        launch(permission: "authorized", catalog: "mixed", language: "en", layout: "grid", reset: true)
+        XCTAssertTrue(element(identifier: "hub.search").waitForExistence(timeout: 5))
+
+        app.typeKey(.downArrow, modifierFlags: [])
+        app.typeKey("k", modifierFlags: .command)
+
+        XCTAssertTrue(element(identifier: "hub.item.actions.lark").waitForExistence(timeout: 3))
+    }
+
     private func launch(
         permission: String,
         catalog: String,
         language: String,
         appearance: String = "system",
+        layout: String = "compact",
         onboarding: Bool = false,
         suite: String = UUID().uuidString,
         reset: Bool = false
@@ -119,6 +130,7 @@ final class MenuHubUITests: XCTestCase {
             "-catalogFixture", catalog,
             "-uiTestLanguage", language,
             "-uiTestAppearance", appearance,
+            "-uiTestLayout", layout,
             "-uiTestSuite", suite,
             "-showOnboarding", onboarding ? "1" : "0",
             "-resetFixture", reset ? "1" : "0"

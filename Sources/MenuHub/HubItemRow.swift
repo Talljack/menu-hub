@@ -50,6 +50,11 @@ struct HubItemActionMenuState: Equatable {
     mutating func dismiss() { isPresented = false }
 }
 
+enum HubItemLayoutStyle: Equatable {
+    case row
+    case grid
+}
+
 struct HubItemRow: View {
     let item: HubPanelItem
     let isSelected: Bool
@@ -69,6 +74,7 @@ struct HubItemRow: View {
     let retestCapability: () -> Void
     let openManagement: () -> Void
     let showsCapability: Bool
+    let layoutStyle: HubItemLayoutStyle
     @State private var isHovering = false
     @State private var aliasDraft: String
     @State private var actionMenuState = HubItemActionMenuState()
@@ -80,7 +86,8 @@ struct HubItemRow: View {
         action: @escaping () -> Void, openHost: @escaping () -> Void, toggleFavorite: @escaping () -> Void,
         saveAlias: @escaping (String?) -> Void, setMembership: @escaping (UUID, Bool) -> Void,
         ignore: @escaping () -> Void, retestCapability: @escaping () -> Void,
-        openManagement: @escaping () -> Void, showsCapability: Bool = true
+        openManagement: @escaping () -> Void, showsCapability: Bool = true,
+        layoutStyle: HubItemLayoutStyle = .row
     ) {
         self.item = item; self.isSelected = isSelected; self.isInvoking = isInvoking
         self.hasFailure = hasFailure; self.hasSucceeded = hasSucceeded
@@ -92,10 +99,30 @@ struct HubItemRow: View {
         self.retestCapability = retestCapability
         self.openManagement = openManagement
         self.showsCapability = showsCapability
+        self.layoutStyle = layoutStyle
         _aliasDraft = State(initialValue: item.record.alias ?? "")
     }
 
     var body: some View {
+        Group {
+            switch layoutStyle {
+            case .row: rowLayout
+            case .grid: gridLayout
+            }
+        }
+        .onHover { isHovering = $0 }
+        .contextMenu { sharedMenuActions }
+        .accessibilityIdentifier("hub.item.\(item.id)")
+        .onAppear { actionMenuState.applyExternalRequest(isActionMenuRequested) }
+        .onChange(of: isActionMenuRequested) { _, requested in
+            actionMenuState.applyExternalRequest(requested)
+        }
+        .onChange(of: actionMenuState.isPresented) { wasPresented, isPresented in
+            if wasPresented && !isPresented { actionMenuDidDismiss() }
+        }
+    }
+
+    private var rowLayout: some View {
         HStack(spacing: 2) {
             Button(action: action) {
                 HStack(spacing: 9) {
@@ -120,35 +147,59 @@ struct HubItemRow: View {
             .accessibilityValue(accessibility.value)
             .accessibilityHint(accessibility.help)
 
-            Button { actionMenuState.toggle() } label: {
-                Group {
-                    if isInvoking { ProgressView().controlSize(.small) }
-                    else if hasFailure { Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red) }
-                    else if hasSucceeded { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green) }
-                    else { capabilityIcon }
-                }
-                .frame(width: 24, height: 24)
-            }
-            .buttonStyle(.borderless)
-            .opacity(actionButtonIsVisible ? 1 : 0)
-            .allowsHitTesting(actionButtonIsVisible)
-            .accessibilityLabel(L("accessibility.moreActionsFormat", accessibility.label))
-            .accessibilityValue(accessibility.value)
-            .accessibilityHint(accessibility.help)
-            .help(accessibility.help)
-            .popover(isPresented: $actionMenuState.isPresented, arrowEdge: .trailing) { actionPopover }
+            actionMenuButton
         }
         .padding(.trailing, HubPanelLayout.rowActionTrailingPadding)
-        .onHover { isHovering = $0 }
-        .contextMenu { sharedMenuActions }
-        .accessibilityIdentifier("hub.item.\(item.id)")
-        .onAppear { actionMenuState.applyExternalRequest(isActionMenuRequested) }
-        .onChange(of: isActionMenuRequested) { _, requested in
-            actionMenuState.applyExternalRequest(requested)
+    }
+
+    private var gridLayout: some View {
+        ZStack(alignment: .topTrailing) {
+            Button(action: action) {
+                VStack(spacing: 5) {
+                    hostIcon.frame(width: 30, height: 30)
+                    Text(item.primaryTitle)
+                        .font(.caption)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                    if showsCapability {
+                        Text(hasFailure ? L("panel.actionFailed") : (hasSucceeded ? L("panel.completed") : item.secondaryTitle))
+                            .font(.caption2)
+                            .foregroundStyle(hasFailure ? Color.red : Color.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 76)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(HubGridButtonStyle(selected: isSelected, hovered: isHovering))
+            .disabled(!item.canInvoke || isInvoking)
+            .accessibilityLabel(accessibility.label)
+            .accessibilityValue(accessibility.value)
+            .accessibilityHint(accessibility.help)
+
+            actionMenuButton
+                .padding(4)
         }
-        .onChange(of: actionMenuState.isPresented) { wasPresented, isPresented in
-            if wasPresented && !isPresented { actionMenuDidDismiss() }
+    }
+
+    private var actionMenuButton: some View {
+        Button { actionMenuState.toggle() } label: {
+            Group {
+                if isInvoking { ProgressView().controlSize(.small) }
+                else if hasFailure { Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red) }
+                else if hasSucceeded { Image(systemName: "checkmark.circle.fill").foregroundStyle(.green) }
+                else { capabilityIcon }
+            }
+            .frame(width: 24, height: 24)
         }
+        .buttonStyle(.borderless)
+        .opacity(actionButtonIsVisible ? 1 : 0)
+        .allowsHitTesting(actionButtonIsVisible)
+        .accessibilityLabel(L("accessibility.moreActionsFormat", accessibility.label))
+        .accessibilityValue(accessibility.value)
+        .accessibilityHint(accessibility.help)
+        .help(accessibility.help)
+        .popover(isPresented: $actionMenuState.isPresented, arrowEdge: .trailing) { actionPopover }
     }
 
     private var actionPopover: some View {
@@ -250,6 +301,41 @@ private struct HubRowButtonStyle: ButtonStyle {
         configuration.label
             .padding(.horizontal, 6)
             .background(background(for: appearance.layer), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .scaleEffect(appearance.scale)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.08), value: configuration.isPressed)
+    }
+
+    private func background(for layer: HubRowAppearance.Layer) -> Color {
+        switch layer {
+        case .idle: return .clear
+        case .hovered: return Color(nsColor: .selectedContentBackgroundColor).opacity(0.10)
+        case .selected: return Color(nsColor: .selectedContentBackgroundColor).opacity(0.22)
+        case .pressed: return Color(nsColor: .selectedContentBackgroundColor).opacity(0.32)
+        }
+    }
+}
+
+private struct HubGridButtonStyle: ButtonStyle {
+    let selected: Bool
+    let hovered: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        let appearance = HubRowAppearance.resolve(
+            selected: selected,
+            hovered: hovered,
+            pressed: configuration.isPressed,
+            reduceMotion: reduceMotion
+        )
+        configuration.label
+            .padding(4)
+            .background(background(for: appearance.layer), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                if selected {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.65), lineWidth: 1)
+                }
+            }
             .scaleEffect(appearance.scale)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.08), value: configuration.isPressed)
     }

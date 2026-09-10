@@ -125,6 +125,18 @@ final class PanelNavigationTests: XCTestCase {
         XCTAssertEqual(HubRowAppearance.resolve(selected: false, hovered: false, pressed: true, reduceMotion: true).scale, 1)
     }
 
+    func testGridSelectionUsesTheSameVisibleInteractionLayersAsRows() {
+        XCTAssertEqual(HubItemLayoutStyle.grid, .grid)
+        XCTAssertEqual(
+            HubRowAppearance.resolve(selected: true, hovered: false, pressed: false, reduceMotion: false).layer,
+            .selected
+        )
+        XCTAssertEqual(
+            HubRowAppearance.resolve(selected: false, hovered: true, pressed: false, reduceMotion: false).layer,
+            .hovered
+        )
+    }
+
     func testPresentationIDsAreUniquePerSectionAndAllIsCanonical() {
         XCTAssertEqual(HubItemPresentationID(sectionID: "favorites", itemID: "item").rawValue, "favorites:item")
         XCTAssertNotEqual(HubItemPresentationID(sectionID: "recent", itemID: "item"), HubItemPresentationID(sectionID: "all", itemID: "item"))
