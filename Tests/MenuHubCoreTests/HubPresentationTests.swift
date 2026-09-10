@@ -31,4 +31,29 @@ final class HubPresentationTests: XCTestCase {
         }
         XCTAssertGreaterThan(visiblePixelCount, 50)
     }
+
+    func testUnreadTemplateWidthsGrowAndOverflowStaysCompact() {
+        let hidden = MenuBarIconFactory.makeImage(presentation: .hidden)
+        let one = MenuBarIconFactory.makeImage(presentation: .count(7))
+        let two = MenuBarIconFactory.makeImage(presentation: .count(42))
+        let overflow = MenuBarIconFactory.makeImage(presentation: .overflow)
+
+        XCTAssertTrue([hidden, one, two, overflow].allSatisfy(\.isTemplate))
+        XCTAssertLessThan(hidden.size.width, one.size.width)
+        XCTAssertLessThan(one.size.width, two.size.width)
+        XCTAssertLessThan(two.size.width, overflow.size.width)
+        XCTAssertLessThanOrEqual(overflow.size.width, 44)
+        XCTAssertTrue([hidden, one, two, overflow].allSatisfy { $0.size.height == 18 })
+    }
+
+    func testUnreadCountIsClampedToSupportedCapsuleRange() {
+        XCTAssertEqual(
+            MenuBarIconFactory.makeImage(presentation: .count(123)).size,
+            MenuBarIconFactory.makeImage(presentation: .count(99)).size
+        )
+        XCTAssertEqual(
+            MenuBarIconFactory.makeImage(presentation: .count(0)).size,
+            MenuBarIconFactory.makeImage(presentation: .count(1)).size
+        )
+    }
 }

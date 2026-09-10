@@ -89,6 +89,12 @@ final class ManagementSettingsTests: XCTestCase {
         XCTAssertEqual(origin.y, 300, accuracy: 0.001)
     }
 
+    func testStatusItemAutosaveNamesAreStableAndDistinct() {
+        XCTAssertEqual(StatusItemIdentity.primaryAutosaveName, "com.local.MenuHub.primary")
+        XCTAssertEqual(StatusItemIdentity.spacerAutosaveName, "com.local.MenuHub.spacer")
+        XCTAssertNotEqual(StatusItemIdentity.primaryAutosaveName, StatusItemIdentity.spacerAutosaveName)
+    }
+
     private func makeRecord(id: String, host: String, original: String, alias: String?, bundle: String) -> MenuBarItemRecord {
         MenuBarItemRecord(
             id: id,

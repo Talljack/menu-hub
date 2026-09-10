@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let hubItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let spacerItem = NSStatusBar.system.statusItem(withLength: 1)
     private let accessibilityClient = AccessibilityClient()
+    private let statusItemBadgeRenderer = StatusItemBadgeRenderer()
     private let diagnosticsController = DiagnosticsController()
     #if DEBUG
     private let uiTestRuntime = UITestRuntime.current
@@ -195,16 +196,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func configureStatusItems() {
+        hubItem.autosaveName = StatusItemIdentity.primaryAutosaveName
+        spacerItem.autosaveName = StatusItemIdentity.spacerAutosaveName
         if let button = hubItem.button {
-            button.image = MenuBarIconFactory.makeImage()
-            button.imagePosition = .imageOnly
-            button.title = ""
+            statusItemBadgeRenderer.apply(.hidden, to: hubItem, button: button)
             button.toolTip = L("common.appName")
             button.setAccessibilityLabel(L("common.appName"))
             button.target = self
             button.action = #selector(handleHubClick(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
+        panelModel.$unreadBadgePresentation
+            .removeDuplicates()
+            .sink { [weak self] presentation in
+                guard let self, let button = hubItem.button else { return }
+                statusItemBadgeRenderer.apply(presentation, to: hubItem, button: button)
+                let description = presentation.label.map { "\(L("common.appName")), \($0)" } ?? L("common.appName")
+                button.toolTip = description
+                button.setAccessibilityLabel(description)
+            }
+            .store(in: &diagnosticSubscriptions)
         updateSpacerAppearance()
     }
 
