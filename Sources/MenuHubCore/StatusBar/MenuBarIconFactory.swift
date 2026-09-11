@@ -11,28 +11,45 @@ public enum MenuBarIconFactory {
     ) -> NSImage {
         guard let label = presentation.label else { return makeBaseImage(pointSize: pointSize) }
         let normalizedLabel = label == "99+" ? label : String(min(max(Int(label) ?? 1, 1), 99))
-        let capsuleWidth = 12 + CGFloat(max(0, normalizedLabel.count - 1)) * 5.5
-        let spacing: CGFloat = 2
-        let size = NSSize(width: pointSize + spacing + capsuleWidth, height: pointSize)
+        let size = NSSize(width: pointSize, height: pointSize)
         let baseImage = makeBaseImage(pointSize: pointSize)
         let image = NSImage(size: size, flipped: false) { rect in
             NSGraphicsContext.current?.imageInterpolation = .high
             baseImage.draw(in: NSRect(x: 0, y: 0, width: pointSize, height: pointSize))
 
+            let capsuleWidth: CGFloat = switch normalizedLabel.count {
+            case 1: 10
+            case 2: 13.5
+            default: 18
+            }
             let capsuleRect = NSRect(
-                x: pointSize + spacing,
-                y: (rect.height - 13) / 2,
+                x: rect.maxX - capsuleWidth,
+                y: rect.maxY - 10,
                 width: capsuleWidth,
-                height: 13
+                height: 10
             )
-            NSColor.black.setFill()
-            NSBezierPath(
+            let capsulePath = NSBezierPath(
                 roundedRect: capsuleRect,
                 xRadius: capsuleRect.height / 2,
                 yRadius: capsuleRect.height / 2
-            ).fill()
+            )
 
-            let font = NSFont.monospacedDigitSystemFont(ofSize: 8.5, weight: .bold)
+            // A transparent keyline keeps the badge distinct from the template
+            // mark in both light and dark menu bars without introducing color.
+            NSGraphicsContext.current?.saveGraphicsState()
+            NSGraphicsContext.current?.compositingOperation = .destinationOut
+            NSBezierPath(
+                roundedRect: capsuleRect.insetBy(dx: -0.75, dy: -0.75),
+                xRadius: (capsuleRect.height + 1.5) / 2,
+                yRadius: (capsuleRect.height + 1.5) / 2
+            ).fill()
+            NSGraphicsContext.current?.restoreGraphicsState()
+
+            NSColor.black.setFill()
+            capsulePath.fill()
+
+            let fontSize: CGFloat = normalizedLabel.count > 2 ? 6.2 : 7.3
+            let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .bold)
             let attributes: [NSAttributedString.Key: Any] = [
                 .font: font,
                 .foregroundColor: NSColor.white,
@@ -41,12 +58,12 @@ public enum MenuBarIconFactory {
             let textSize = text.size()
             let textOrigin = NSPoint(
                 x: capsuleRect.midX - textSize.width / 2,
-                y: capsuleRect.midY - textSize.height / 2 + 0.5
+                y: capsuleRect.midY - textSize.height / 2 + 0.25
             )
-            let oldOperation = NSGraphicsContext.current?.compositingOperation
+            NSGraphicsContext.current?.saveGraphicsState()
             NSGraphicsContext.current?.compositingOperation = .destinationOut
             text.draw(at: textOrigin)
-            if let oldOperation { NSGraphicsContext.current?.compositingOperation = oldOperation }
+            NSGraphicsContext.current?.restoreGraphicsState()
             return true
         }
         image.isTemplate = true

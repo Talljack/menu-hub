@@ -61,7 +61,7 @@ Repair Permission resets only Menu Hub's own `com.local.MenuHub` Accessibility e
 
 ### Unread message badge
 
-When Accessibility permission and automatic scanning are enabled, Menu Hub can show a monochrome unread-total capsule beside its menu bar icon. It refreshes known numeric titles every second while the panel is open and every five seconds while closed.
+When Accessibility permission and automatic scanning are enabled, Menu Hub overlays a monochrome unread-total capsule inside its menu bar icon. The status item keeps a constant width so new messages do not push it into the notch or out of the visible area. It refreshes known numeric titles every second while the panel is open and every five seconds while closed.
 
 Automatic mode includes Feishu/Lark, WeChat, WeCom, QQ, DingTalk, Slack, Microsoft Teams, Telegram, WhatsApp, Discord, Signal, LINE, KakaoTalk, Viber, Zoom Workplace, Mattermost, Zulip, and Element. Menu Hub counts only an exact numeric title exposed by macOS; a dot or other presence-only indicator contributes zero. Open **Settings > Items & Groups**, select an item, and choose **Unread Badge > Automatic / Always Include / Never Include** to override it locally.
 

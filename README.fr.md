@@ -35,7 +35,7 @@ Si l'option est déjà activée mais que l'accès est toujours refusé, choisiss
 
 ## Utilisation
 
-Avec l'autorisation d'accessibilité, Menu Hub affiche à côté de son icône un compteur monochrome du total non lu. Seuls les nombres exacts exposés par macOS sont comptés ; un point sans nombre vaut zéro. Dans **Réglages > Éléments et groupes**, chaque élément peut être réglé sur Automatique, Toujours inclure ou Ne jamais inclure.
+Avec l'autorisation d'accessibilité, Menu Hub superpose un compteur monochrome du total non lu dans son icône de largeur fixe. Seuls les nombres exacts exposés par macOS sont comptés ; un point sans nombre vaut zéro. Dans **Réglages > Éléments et groupes**, chaque élément peut être réglé sur Automatique, Toujours inclure ou Ne jamais inclure.
 
 - Cliquez sur l'icône à quatre pétales pour ouvrir ou fermer le panneau. Faites Option-clic pour masquer ou afficher la zone gérée.
 - Appuyez sur `⌥M` depuis n'importe quelle application. Modifiez ce raccourci dans **Réglages > Raccourcis**.

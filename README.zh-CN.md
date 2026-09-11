@@ -61,7 +61,7 @@ Menu Hub 使用 Swift 6、SwiftUI 和 AppKit 开发，只使用 macOS 公开 API
 
 ### 未读消息提醒
 
-开启辅助功能权限和自动扫描后，Menu Hub 会在菜单栏图标旁显示单色未读总数胶囊。面板打开时每秒刷新已知数字，面板关闭时每 5 秒刷新一次。
+开启辅助功能权限和自动扫描后，Menu Hub 会在菜单栏图标内叠加单色未读总数胶囊。状态项始终保持固定宽度，避免新消息把图标挤入刘海或挤出可视区域。面板打开时每秒刷新已知数字，面板关闭时每 5 秒刷新一次。
 
 自动模式默认支持飞书/Lark、微信、企业微信、QQ、钉钉、Slack、Microsoft Teams、Telegram、WhatsApp、Discord、Signal、LINE、KakaoTalk、Viber、Zoom Workplace、Mattermost、Zulip 和 Element。只有 macOS 公开辅助功能标题中的准确纯数字才会计入；只有红点、没有数字时按 0 处理。可在 **设置 > 项目与分组** 中选择项目，然后把 **未读提醒** 改为“自动 / 始终计入 / 从不计入”。
 

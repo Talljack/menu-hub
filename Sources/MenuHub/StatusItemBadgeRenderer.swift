@@ -17,6 +17,6 @@ struct StatusItemBadgeRenderer {
         button.image = image
         button.imagePosition = .imageOnly
         button.title = ""
-        item.length = presentation == .hidden ? NSStatusItem.squareLength : image.size.width + 6
+        item.length = NSStatusItem.squareLength
     }
 }

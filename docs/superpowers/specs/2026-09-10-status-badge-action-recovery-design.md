@@ -37,10 +37,10 @@ This is a best-effort initial placement with reliable system-managed persistence
 The selected visual direction is **C: monochrome count capsule**.
 
 - No unread count: render the existing Menu Hub template icon at square status-item width.
-- Count from 1 through 99: render the icon followed by a compact rounded capsule containing the total.
+- Count from 1 through 99: overlay a compact rounded capsule containing the total inside the icon's square footprint.
 - Count greater than or equal to 100, or any contributing exact-lower-bound value such as `99+`: render `99+`.
 - The icon and capsule are one dynamically generated template image. The opaque parts use the system status-item tint and the digit cutouts reveal the menu bar behind them, so the result automatically reverses between light and dark appearances.
-- The status item grows only enough to fit the capsule and returns to square width at zero.
+- The status item remains at square width for every badge state, preventing a badge update from moving the item into a notch or an obscured menu-bar region.
 - The hit target, native pressed highlight, left click, right click, Option-click, tooltip, and VoiceOver behavior remain unchanged.
 - Increased Contrast is respected by using a solid template silhouette. No animation is required, so Reduce Motion needs no special branch.
 
@@ -196,7 +196,7 @@ All production changes follow red-green-refactor.
 
 ### AppKit renderer tests
 
-- zero, single-digit, double-digit, and `99+` presentations select correct dimensions;
+- zero, single-digit, double-digit, and `99+` presentations retain the same square dimensions and contain visible pixels;
 - the rendered image is a template image;
 - status item returns to square width at zero;
 - localized tooltip and accessibility label update with the count;

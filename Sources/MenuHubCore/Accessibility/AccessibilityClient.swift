@@ -26,8 +26,15 @@ public actor AccessibilityClient: AccessibilityServing {
 
         var snapshots: [AccessibilitySnapshot] = []
         var issues: [AccessibilityScanIssue] = []
+        let currentProcessIdentifier = ProcessInfo.processInfo.processIdentifier
         let applications = NSWorkspace.shared.runningApplications
-            .filter { $0.activationPolicy != .prohibited && Self.shouldInspect(bundleURL: $0.bundleURL) }
+            .filter {
+                $0.activationPolicy != .prohibited && Self.shouldInspect(
+                    processIdentifier: $0.processIdentifier,
+                    currentProcessIdentifier: currentProcessIdentifier,
+                    bundleURL: $0.bundleURL
+                )
+            }
             .sorted { ($0.localizedName ?? "") < ($1.localizedName ?? "") }
 
         for application in applications {
@@ -75,10 +82,15 @@ public actor AccessibilityClient: AccessibilityServing {
         }
         var refreshed: [AccessibilitySnapshot] = []
         var issues: [AccessibilityScanIssue] = []
+        let currentProcessIdentifier = ProcessInfo.processInfo.processIdentifier
         for snapshot in snapshots {
             guard !Task.isCancelled else { break }
             guard let application = NSRunningApplication(processIdentifier: snapshot.processIdentifier),
-                  Self.shouldInspect(bundleURL: application.bundleURL) else { continue }
+                  Self.shouldInspect(
+                    processIdentifier: application.processIdentifier,
+                    currentProcessIdentifier: currentProcessIdentifier,
+                    bundleURL: application.bundleURL
+                  ) else { continue }
             let root = AXUIElementCreateApplication(snapshot.processIdentifier)
             let menuBarRead = elementAttributeRead(root, kAXExtrasMenuBarAttribute as String)
             appendIssue(menuBarRead.error, application: application, to: &issues)
@@ -119,6 +131,15 @@ public actor AccessibilityClient: AccessibilityServing {
             return appComponents.count <= 1
         }
         return true
+    }
+
+    nonisolated static func shouldInspect(
+        processIdentifier: pid_t,
+        currentProcessIdentifier: pid_t,
+        bundleURL: URL?
+    ) -> Bool {
+        guard processIdentifier != currentProcessIdentifier else { return false }
+        return shouldInspect(bundleURL: bundleURL)
     }
 
     public func press(_ snapshot: AccessibilitySnapshot) async -> Result<Void, AccessibilityDomainError> {

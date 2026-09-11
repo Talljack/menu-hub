@@ -3,6 +3,21 @@ import ApplicationServices
 @testable import MenuHubCore
 
 final class AccessibilityPipelineTests: XCTestCase {
+    func testApplicationInspectionExcludesTheScannerProcessItself() {
+        let appURL = URL(fileURLWithPath: "/Applications/Menu Hub.app")
+
+        XCTAssertFalse(AccessibilityClient.shouldInspect(
+            processIdentifier: 42,
+            currentProcessIdentifier: 42,
+            bundleURL: appURL
+        ))
+        XCTAssertTrue(AccessibilityClient.shouldInspect(
+            processIdentifier: 43,
+            currentProcessIdentifier: 42,
+            bundleURL: appURL
+        ))
+    }
+
     func testAXReadIssueClassificationTreatsExpectedAbsenceAsNormal() {
         XCTAssertNil(AccessibilityScanIssue.issue(
             for: .noValue,

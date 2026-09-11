@@ -32,18 +32,28 @@ final class HubPresentationTests: XCTestCase {
         XCTAssertGreaterThan(visiblePixelCount, 50)
     }
 
-    func testUnreadTemplateWidthsGrowAndOverflowStaysCompact() {
+    func testUnreadTemplateKeepsAConstantStatusItemFootprint() {
         let hidden = MenuBarIconFactory.makeImage(presentation: .hidden)
         let one = MenuBarIconFactory.makeImage(presentation: .count(7))
         let two = MenuBarIconFactory.makeImage(presentation: .count(42))
         let overflow = MenuBarIconFactory.makeImage(presentation: .overflow)
 
         XCTAssertTrue([hidden, one, two, overflow].allSatisfy(\.isTemplate))
-        XCTAssertLessThan(hidden.size.width, one.size.width)
-        XCTAssertLessThan(one.size.width, two.size.width)
-        XCTAssertLessThan(two.size.width, overflow.size.width)
-        XCTAssertLessThanOrEqual(overflow.size.width, 44)
+        XCTAssertEqual(one.size, hidden.size)
+        XCTAssertEqual(two.size, hidden.size)
+        XCTAssertEqual(overflow.size, hidden.size)
         XCTAssertTrue([hidden, one, two, overflow].allSatisfy { $0.size.height == 18 })
+        for image in [one, two, overflow] {
+            let representation = try? XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(image.tiffRepresentation)))
+            let visiblePixels = representation.map { bitmap in
+                (0..<bitmap.pixelsHigh).reduce(into: 0) { total, y in
+                    total += (0..<bitmap.pixelsWide).filter {
+                        (bitmap.colorAt(x: $0, y: y)?.alphaComponent ?? 0) > 0.35
+                    }.count
+                }
+            } ?? 0
+            XCTAssertGreaterThan(visiblePixels, 50)
+        }
     }
 
     func testUnreadCountIsClampedToSupportedCapsuleRange() {
