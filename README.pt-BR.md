@@ -35,6 +35,8 @@ Se a opção já estiver ativa, mas o acesso continuar indisponível, escolha **
 
 ## Como usar
 
+Com a permissão de Acessibilidade, o Menu Hub mostra ao lado do ícone um contador monocromático do total não lido. Apenas números exatos expostos pelo macOS são somados; um ponto sem número conta como zero. Em **Ajustes > Itens e grupos**, cada item pode ser definido como Automático, Sempre incluir ou Nunca incluir.
+
 - Clique no ícone de quatro pétalas para abrir ou fechar o painel. Use Option-clique para ocultar ou mostrar a área gerenciada.
 - Pressione `⌥M` em qualquer aplicativo. Altere o atalho em **Ajustes > Atalhos**.
 - Pesquise pelo aplicativo ou item e clique em um resultado para executar sua ação normal.

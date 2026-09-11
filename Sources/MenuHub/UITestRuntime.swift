@@ -13,6 +13,7 @@ struct UITestRuntime {
     let layout: LayoutPreference
     let showsOnboarding: Bool
     let resetFixture: Bool
+    let actionFailure: AccessibilityDomainError?
     let directory: URL
 
     static var current: Self? {
@@ -37,6 +38,8 @@ struct UITestRuntime {
             layout: layout,
             showsOnboarding: value(after: "-showOnboarding", in: arguments) == "1",
             resetFixture: value(after: "-resetFixture", in: arguments) == "1",
+            actionFailure: value(after: "-uiTestActionFailure", in: arguments)
+                .flatMap(AccessibilityDomainError.init(rawValue:)),
             directory: directory
         )
     }
@@ -49,7 +52,7 @@ struct UITestRuntime {
         let store = UITestCatalogStore(directory: directory, seed: fixture.document, reset: resetFixture)
         let controller = CatalogController(
             store: store,
-            accessibility: UITestAccessibility(result: fixture.scanResult),
+            accessibility: UITestAccessibility(result: fixture.scanResult, actionFailure: actionFailure),
             launcher: UITestLauncher(),
             canLaunchHost: { _ in true },
             hostMetadataResolver: UITestHostMetadataResolver()
@@ -178,8 +181,11 @@ private actor UITestCatalogStore: CatalogStoring {
 
 private struct UITestAccessibility: AccessibilityServing {
     let result: AccessibilityScanResult
+    let actionFailure: AccessibilityDomainError?
     func scan() async -> AccessibilityScanResult { result }
-    func press(_ snapshot: AccessibilitySnapshot) async -> Result<Void, AccessibilityDomainError> { .success(()) }
+    func press(_ snapshot: AccessibilitySnapshot) async -> Result<Void, AccessibilityDomainError> {
+        actionFailure.map { .failure($0) } ?? .success(())
+    }
 }
 
 private struct UITestLauncher: ApplicationLaunching {
