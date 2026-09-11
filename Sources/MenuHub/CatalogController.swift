@@ -337,6 +337,8 @@ final class CatalogController: ObservableObject {
         isScanning = false
     }
 
+    func clearActionFailure() { errors.actionFailure = nil }
+
     @discardableResult
     func createGroup(name: String) async -> GroupRecord {
         let group = document.createGroup(name: name)

@@ -5,6 +5,10 @@ import XCTest
 
 @MainActor
 final class PanelNavigationTests: XCTestCase {
+    func testFailedActionUsesRetryLabelWithoutRemovingOpenHostAction() {
+        XCTAssertEqual(HubItemActionLabel.primary(hasFailure: true, isLaunchOnly: false), L("panel.retry"))
+        XCTAssertEqual(HubItemActionLabel.primary(hasFailure: false, isLaunchOnly: true), L("panel.openApp"))
+    }
     func testDisplayTitleAlwaysLeadsWithResolvedHostName() {
         XCTAssertEqual(makeItem(host: "WeChat", item: "WeChat").primaryTitle, "WeChat")
         XCTAssertEqual(makeItem(host: "飞书", item: "6").primaryTitle, "飞书 — 6")

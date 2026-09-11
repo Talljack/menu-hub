@@ -26,7 +26,7 @@ public struct ActionExecutor: Sendable {
         accessibility: any AccessibilityServing,
         launcher: any ApplicationLaunching,
         scanTimeout: Duration = .seconds(2),
-        pressTimeout: Duration = .milliseconds(500)
+        pressTimeout: Duration = .milliseconds(1_200)
     ) {
         self.accessibility = accessibility
         self.launcher = launcher

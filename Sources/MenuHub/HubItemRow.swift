@@ -55,6 +55,13 @@ enum HubItemLayoutStyle: Equatable {
     case grid
 }
 
+enum HubItemActionLabel {
+    static func primary(hasFailure: Bool, isLaunchOnly: Bool) -> String {
+        if hasFailure { return L("panel.retry") }
+        return L(isLaunchOnly ? "panel.openApp" : "panel.defaultAction")
+    }
+}
+
 struct HubItemRow: View {
     let item: HubPanelItem
     let isSelected: Bool
@@ -204,7 +211,10 @@ struct HubItemRow: View {
 
     private var actionPopover: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Button(L(item.isLaunchOnly ? "panel.openApp" : "panel.defaultAction")) { actionMenuState.dismiss(); action() }
+            Button(HubItemActionLabel.primary(hasFailure: hasFailure, isLaunchOnly: item.isLaunchOnly)) {
+                actionMenuState.dismiss()
+                action()
+            }
                 .disabled(!item.canInvoke || isInvoking)
             if canOpenHost {
                 Button(L("panel.openHost")) { actionMenuState.dismiss(); openHost() }
@@ -245,7 +255,8 @@ struct HubItemRow: View {
     }
 
     @ViewBuilder private var sharedMenuActions: some View {
-        Button(L(item.isLaunchOnly ? "panel.openApp" : "panel.defaultAction"), action: action).disabled(!item.canInvoke || isInvoking)
+        Button(HubItemActionLabel.primary(hasFailure: hasFailure, isLaunchOnly: item.isLaunchOnly), action: action)
+            .disabled(!item.canInvoke || isInvoking)
         if canOpenHost { Button(L("panel.openHost"), action: openHost).disabled(isInvoking) }
         Button(L(item.record.isFavorite ? "panel.unfavorite" : "panel.favorite"), action: toggleFavorite)
         Button(L("panel.editAlias")) { actionMenuState.applyExternalRequest(true) }

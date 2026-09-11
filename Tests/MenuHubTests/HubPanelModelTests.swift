@@ -517,6 +517,33 @@ final class HubPanelModelTests: XCTestCase {
         XCTAssertNil(model.lastFailedItemID)
     }
 
+    func testFailedInvocationFeedbackClearsAfterConfiguredDuration() async {
+        let accessibility = ControlledAccessibility(pressResult: .failure(.targetUnresponsive))
+        let controller = CatalogController(
+            store: FakeCatalogStore(loadResults: [testDocument()]), accessibility: accessibility,
+            launcher: FakeLauncher(), now: { testNow }
+        )
+        await controller.load()
+        let scan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(0, with: .init(snapshots: [testSnapshot()], errors: []))
+        await scan.value
+        let model = HubPanelModel(
+            controller: controller,
+            initialPermissionState: .authorized,
+            failureFeedbackDuration: .milliseconds(10)
+        )
+
+        model.invoke(model.items[0])
+        let failurePublished = await waitUntil { model.lastFailedItemID == "item" }
+        XCTAssertTrue(failurePublished)
+        try? await Task.sleep(for: .milliseconds(30))
+
+        XCTAssertNil(model.lastFailedItemID)
+        XCTAssertNil(model.statusMessageKey)
+        XCTAssertNil(controller.errors.actionFailure)
+    }
+
     func testSuccessfulInvocationShowsRowFeedbackWhenClosePreferenceIsOff() async {
         var document = testDocument()
         document.preferences.closeAfterSuccessfulTrigger = false

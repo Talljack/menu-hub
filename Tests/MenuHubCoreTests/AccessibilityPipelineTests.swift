@@ -262,6 +262,19 @@ final class AccessibilityPipelineTests: XCTestCase {
         XCTAssertEqual(lateCounts.scan, 0)
     }
 
+    func testDefaultPressAllowsSlowButResponsiveTarget() async {
+        let accessibility = FakeAccessibility(pressDelay: .milliseconds(700))
+        let outcome = await ActionExecutor(
+            accessibility: accessibility,
+            launcher: FakeLauncher(result: true)
+        ).execute(item(), snapshot: snapshot())
+
+        XCTAssertEqual(outcome, .pressed)
+        let counts = await accessibility.counts
+        XCTAssertEqual(counts.press, 1)
+        XCTAssertEqual(counts.scan, 0)
+    }
+
     func testRefreshScanTimeoutDoesNotPerformRetryPress() async {
         let accessibility = FakeAccessibility(
             scans: [.init(snapshots: [snapshot(path: [9])], errors: [])],

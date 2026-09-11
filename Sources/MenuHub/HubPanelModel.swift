@@ -202,6 +202,7 @@ final class HubPanelModel: ObservableObject {
     private let liveUpdateScheduler: any PanelLiveUpdateScheduling
     private let accessibilityTrustProvider: @MainActor () -> Bool
     private let runningUserApplicationBundleIdentifiers: (@MainActor () -> Set<String>)?
+    private let failureFeedbackDuration: Duration
     private var subscriptions = Set<AnyCancellable>()
     private var invocationGeneration = 0
     private var invocationTask: Task<Void, Never>?
@@ -211,6 +212,7 @@ final class HubPanelModel: ObservableObject {
     private var liveScanGeneration = 0
     private var inFlightLiveScanTask: Task<Void, Never>?
     private var successFeedbackTask: Task<Void, Never>?
+    private var failureFeedbackTask: Task<Void, Never>?
     private var pendingRepairReason: PermissionRepairReason?
     private var manualScanTask: Task<Void, Never>?
     private var manualScanGeneration = 0
@@ -222,6 +224,7 @@ final class HubPanelModel: ObservableObject {
         liveUpdateCancellation?.cancel()
         inFlightLiveScanTask?.cancel()
         successFeedbackTask?.cancel()
+        failureFeedbackTask?.cancel()
         manualScanTask?.cancel()
     }
 
@@ -237,6 +240,7 @@ final class HubPanelModel: ObservableObject {
         liveUpdateScheduler = SystemPanelLiveUpdateScheduler()
         accessibilityTrustProvider = { AccessibilityClient.isTrusted() }
         runningUserApplicationBundleIdentifiers = { HostApplicationResolver.runningUserApplicationBundleIdentifiers() }
+        failureFeedbackDuration = .seconds(3)
         permissionState = AccessibilityClient.isTrusted() ? .authorized : .unknown
         observeController()
         operationState = .loading
@@ -260,7 +264,8 @@ final class HubPanelModel: ObservableObject {
         permissionEffectHandler: any PermissionEffectHandling = SystemPermissionEffectHandler(),
         liveUpdateScheduler: any PanelLiveUpdateScheduling = SystemPanelLiveUpdateScheduler(),
         accessibilityTrustProvider: @escaping @MainActor () -> Bool = { true },
-        runningUserApplicationBundleIdentifiers: (@MainActor () -> Set<String>)? = nil
+        runningUserApplicationBundleIdentifiers: (@MainActor () -> Set<String>)? = nil,
+        failureFeedbackDuration: Duration = .seconds(3)
     ) {
         self.controller = controller
         self.now = now
@@ -269,6 +274,7 @@ final class HubPanelModel: ObservableObject {
         self.liveUpdateScheduler = liveUpdateScheduler
         self.accessibilityTrustProvider = accessibilityTrustProvider
         self.runningUserApplicationBundleIdentifiers = runningUserApplicationBundleIdentifiers
+        self.failureFeedbackDuration = failureFeedbackDuration
         observeController()
         rebuildSnapshot()
     }
@@ -374,6 +380,7 @@ final class HubPanelModel: ObservableObject {
         liveUpdateCancellation = liveUpdateScheduler.schedule(every: interval) { [weak self] in
             guard let self, self.liveUpdatesActive, self.permissionGranted,
                   self.inFlightLiveScanTask == nil && !self.controller.isScanning else { return }
+            if case .invoking = self.operationState { return }
             let fullDiscovery = self.monitoringMode == .foreground
                 && (self.nextFullDiscoveryAt.map { self.now() >= $0 } ?? true)
             self.startLiveScan(fullDiscovery: fullDiscovery)
@@ -447,6 +454,7 @@ final class HubPanelModel: ObservableObject {
     }
 
     private func beginInvocation(itemID: String, forceLaunchHost: Bool) {
+        suspendLiveScanningForInvocation()
         invocationTask?.cancel()
         invocationGeneration += 1
         let generation = invocationGeneration
@@ -454,6 +462,7 @@ final class HubPanelModel: ObservableObject {
         statusMessageKey = nil
         lastFailedItemID = nil
         lastSucceededItemID = nil
+        failureFeedbackTask?.cancel()
         operationState = .invoking(itemID: itemID)
         invocationTask = Task { [weak self] in
             let outcome = await controller.invoke(itemID: itemID, forceLaunchHost: forceLaunchHost)
@@ -462,15 +471,17 @@ final class HubPanelModel: ObservableObject {
             operationState = controller.isScanning ? .scanning : .idle
             switch outcome {
             case .pressed, .openedHost: publishSuccess(for: itemID)
-            case .failed(let failure): statusMessageKey = Self.messageKey(for: failure); lastFailedItemID = itemID
-            case .unavailable: statusMessageKey = .unavailable; lastFailedItemID = itemID
+            case .failed(let failure): publishFailure(Self.messageKey(for: failure), itemID: itemID, generation: generation)
+            case .unavailable: publishFailure(.unavailable, itemID: itemID, generation: generation)
             }
+            resumeMonitoringAfterInvocation()
         }
     }
 
     func invokeSelection(forceLaunchHost: Bool) {
         guard let selectionID, let item = items.first(where: { $0.id == selectionID }), item.canInvoke else { return }
         if !forceLaunchHost { invoke(item); return }
+        suspendLiveScanningForInvocation()
         invocationTask?.cancel()
         invocationGeneration += 1
         let generation = invocationGeneration
@@ -478,15 +489,17 @@ final class HubPanelModel: ObservableObject {
         statusMessageKey = nil
         lastFailedItemID = nil
         lastSucceededItemID = nil
+        failureFeedbackTask?.cancel()
         invocationTask = Task { [weak self, controller] in
             let outcome = await controller.invoke(itemID: item.id, forceLaunchHost: true)
             guard let self, generation == invocationGeneration, !Task.isCancelled else { return }
             operationState = controller.isScanning ? .scanning : .idle
             switch outcome {
             case .pressed, .openedHost: publishSuccess(for: item.id)
-            case .failed(let failure): statusMessageKey = Self.messageKey(for: failure); lastFailedItemID = item.id
-            case .unavailable: statusMessageKey = .unavailable; lastFailedItemID = item.id
+            case .failed(let failure): publishFailure(Self.messageKey(for: failure), itemID: item.id, generation: generation)
+            case .unavailable: publishFailure(.unavailable, itemID: item.id, generation: generation)
             }
+            resumeMonitoringAfterInvocation()
         }
     }
 
@@ -531,6 +544,7 @@ final class HubPanelModel: ObservableObject {
     func rebuildSearchIndex() { rebuildSnapshot() }
 
     private func publishSuccess(for itemID: String) {
+        failureFeedbackTask?.cancel()
         guard !controller.document.preferences.closeAfterSuccessfulTrigger else {
             onSuccessfulInvocation?()
             return
@@ -542,6 +556,34 @@ final class HubPanelModel: ObservableObject {
             guard !Task.isCancelled, self?.lastSucceededItemID == itemID else { return }
             self?.lastSucceededItemID = nil
         }
+    }
+
+    private func publishFailure(_ message: PanelStatusMessageKey, itemID: String, generation: Int) {
+        statusMessageKey = message
+        lastFailedItemID = itemID
+        failureFeedbackTask?.cancel()
+        let duration = failureFeedbackDuration
+        failureFeedbackTask = Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            guard let self, !Task.isCancelled, generation == invocationGeneration,
+                  lastFailedItemID == itemID else { return }
+            lastFailedItemID = nil
+            if statusMessageKey == message { statusMessageKey = nil }
+            controller.clearActionFailure()
+        }
+    }
+
+    private func suspendLiveScanningForInvocation() {
+        liveScanGeneration += 1
+        inFlightLiveScanTask?.cancel()
+        inFlightLiveScanTask = nil
+        controller.invalidateAccessibilityWork()
+    }
+
+    private func resumeMonitoringAfterInvocation() {
+        guard liveUpdatesActive, permissionGranted, controller.document.preferences.automaticScanning,
+              inFlightLiveScanTask == nil, !controller.isScanning else { return }
+        startLiveScan(fullDiscovery: false)
     }
 
     func selectNext() { moveSelection(by: 1) }
