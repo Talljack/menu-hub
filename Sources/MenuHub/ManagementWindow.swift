@@ -159,6 +159,19 @@ private struct ItemInspector: View {
                     get: { item.isIgnored },
                     set: { value in Task { await controller.setIgnored(value, itemID: item.id) } }
                 ))
+                Picker(L("management.unreadBadge"), selection: Binding(
+                    get: { item.unreadBadgePreference },
+                    set: { value in
+                        Task { await controller.setUnreadBadgePreference(value, itemID: item.id) }
+                    }
+                )) {
+                    Text(L("management.unreadBadgeAutomatic")).tag(UnreadBadgePreference.automatic)
+                    Text(L("management.unreadBadgeInclude")).tag(UnreadBadgePreference.include)
+                    Text(L("management.unreadBadgeExclude")).tag(UnreadBadgePreference.exclude)
+                }
+                Text(L("management.unreadBadgeHelp"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section(L("management.groups")) {
                 ForEach(controller.document.groups.sorted { $0.manualOrder < $1.manualOrder }) { group in

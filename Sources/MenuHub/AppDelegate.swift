@@ -211,7 +211,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             .sink { [weak self] presentation in
                 guard let self, let button = hubItem.button else { return }
                 statusItemBadgeRenderer.apply(presentation, to: hubItem, button: button)
-                let description = presentation.label.map { "\(L("common.appName")), \($0)" } ?? L("common.appName")
+                let description: String
+                switch presentation {
+                case .hidden: description = L("common.appName")
+                case let .count(value): description = L("statusItem.unreadFormat", value)
+                case .overflow: description = L("statusItem.unreadOverflow")
+                }
                 button.toolTip = description
                 button.setAccessibilityLabel(description)
             }

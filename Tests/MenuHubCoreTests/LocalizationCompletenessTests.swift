@@ -40,6 +40,20 @@ struct LocalizationCompletenessTests {
         for prefix in requiredPrefixes {
             #expect(keys.contains(where: { $0.hasPrefix(prefix) }), "Missing localization area: \(prefix)")
         }
+
+        let requiredKeys = [
+            "management.unreadBadge",
+            "management.unreadBadgeAutomatic",
+            "management.unreadBadgeInclude",
+            "management.unreadBadgeExclude",
+            "management.unreadBadgeHelp",
+            "statusItem.unreadFormat",
+            "statusItem.unreadOverflow",
+            "panel.retry",
+        ]
+        for key in requiredKeys {
+            #expect(keys.contains(key), "Missing required localization: \(key)")
+        }
     }
 
     private func strings(at relativePath: String) throws -> [String: String] {

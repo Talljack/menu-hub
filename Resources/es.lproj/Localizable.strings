@@ -238,3 +238,12 @@
 "error.unavailable" = "El elemento no se puede activar de forma segura en este momento.";
 "error.permissionResetUnavailable" = "No se pudo restablecer el registro de accesibilidad de Menu Hub. Vuelve a intentarlo más tarde.";
 "error.settingsUnavailable" = "La configuración no está disponible temporalmente.";
+
+"management.unreadBadge" = "Indicador de no leídos";
+"management.unreadBadgeAutomatic" = "Automático";
+"management.unreadBadgeInclude" = "Incluir siempre";
+"management.unreadBadgeExclude" = "No incluir";
+"management.unreadBadgeHelp" = "El modo automático solo suma apps de chat compatibles cuando macOS muestra un número exacto.";
+"statusItem.unreadFormat" = "Menu Hub, %d mensajes sin leer";
+"statusItem.unreadOverflow" = "Menu Hub, 99 o más mensajes sin leer";
+"panel.retry" = "Reintentar";

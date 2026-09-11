@@ -238,3 +238,12 @@
 "error.unavailable" = "現在、アイテムを安全にトリガーできません。";
 "error.permissionResetUnavailable" = "Menu Hub のアクセシビリティ レコードをリセットできませんでした。後でもう一度試してください。";
 "error.settingsUnavailable" = "設定は一時的に利用できなくなります。";
+
+"management.unreadBadge" = "未読バッジ";
+"management.unreadBadgeAutomatic" = "自動";
+"management.unreadBadgeInclude" = "常に含める";
+"management.unreadBadgeExclude" = "含めない";
+"management.unreadBadgeHelp" = "自動では、macOS が正確な数字を表示する対応チャットアプリだけを集計します。";
+"statusItem.unreadFormat" = "Menu Hub、未読メッセージ %d 件";
+"statusItem.unreadOverflow" = "Menu Hub、未読メッセージ 99 件以上";
+"panel.retry" = "再試行";

@@ -238,3 +238,12 @@
 "error.unavailable" = "The item cannot be triggered safely right now.";
 "error.permissionResetUnavailable" = "Menu Hub's Accessibility record could not be reset. Try again later.";
 "error.settingsUnavailable" = "Settings are temporarily unavailable.";
+
+"management.unreadBadge" = "Unread Badge";
+"management.unreadBadgeAutomatic" = "Automatic";
+"management.unreadBadgeInclude" = "Always Include";
+"management.unreadBadgeExclude" = "Never Include";
+"management.unreadBadgeHelp" = "Automatic includes supported chat apps only when macOS exposes an exact numeric title.";
+"statusItem.unreadFormat" = "Menu Hub, %d unread messages";
+"statusItem.unreadOverflow" = "Menu Hub, 99 or more unread messages";
+"panel.retry" = "Retry";

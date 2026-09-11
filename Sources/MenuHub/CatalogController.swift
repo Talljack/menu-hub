@@ -383,6 +383,9 @@ final class CatalogController: ObservableObject {
     func setFavorite(_ favorite: Bool, itemID: String) async { if document.setFavorite(favorite, forItemID: itemID) { await mutationDidComplete() } }
     func setMembership(_ member: Bool, itemID: String, groupID: UUID) async { if document.setMembership(member, itemID: itemID, groupID: groupID) { await mutationDidComplete() } }
     func setIgnored(_ ignored: Bool, itemID: String) async { if document.setIgnored(ignored, forItemID: itemID) { await mutationDidComplete() } }
+    func setUnreadBadgePreference(_ preference: UnreadBadgePreference, itemID: String) async {
+        if document.setUnreadBadgePreference(preference, forItemID: itemID) { await mutationDidComplete() }
+    }
 
     func reorderGroups(groupIDs: [UUID]) async { document.reorderGroups(groupIDs: groupIDs); await mutationDidComplete() }
     func reorderItems(itemIDs: [String]) async { document.reorderItems(itemIDs: itemIDs); await mutationDidComplete() }

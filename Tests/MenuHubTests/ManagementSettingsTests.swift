@@ -95,6 +95,25 @@ final class ManagementSettingsTests: XCTestCase {
         XCTAssertNotEqual(StatusItemIdentity.primaryAutosaveName, StatusItemIdentity.spacerAutosaveName)
     }
 
+    func testControllerPersistsUnreadBadgeOverride() async {
+        let document = CatalogDocument(
+            items: [makeRecord(id: "timer", host: "Timer", original: "5", alias: nil, bundle: "com.example.timer")],
+            groups: [],
+            preferences: .default
+        )
+        let store = FakeCatalogStore(loadResults: [document])
+        let controller = CatalogController(
+            store: store, accessibility: ControlledAccessibility(), launcher: FakeLauncher()
+        )
+        await controller.load()
+
+        await controller.setUnreadBadgePreference(.include, itemID: "timer")
+
+        XCTAssertEqual(controller.document.items[0].unreadBadgePreference, .include)
+        let persisted = await store.lastPersisted
+        XCTAssertEqual(persisted?.items[0].unreadBadgePreference, .include)
+    }
+
     private func makeRecord(id: String, host: String, original: String, alias: String?, bundle: String) -> MenuBarItemRecord {
         MenuBarItemRecord(
             id: id,

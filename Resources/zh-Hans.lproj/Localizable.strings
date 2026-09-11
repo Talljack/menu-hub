@@ -238,3 +238,12 @@
 "error.unavailable" = "项目目前无法安全触发。";
 "error.permissionResetUnavailable" = "无法重置 Menu Hub 的辅助功能记录，请稍后重试。";
 "error.settingsUnavailable" = "设置窗口暂不可用。";
+
+"management.unreadBadge" = "未读提醒";
+"management.unreadBadgeAutomatic" = "自动";
+"management.unreadBadgeInclude" = "始终计入";
+"management.unreadBadgeExclude" = "从不计入";
+"management.unreadBadgeHelp" = "自动模式仅支持聊天 App，且只在 macOS 暴露准确数字标题时计入。";
+"statusItem.unreadFormat" = "Menu Hub，%d 条未读消息";
+"statusItem.unreadOverflow" = "Menu Hub，至少 99 条未读消息";
+"panel.retry" = "重试";

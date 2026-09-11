@@ -238,3 +238,12 @@
 "error.unavailable" = "Das Element kann derzeit nicht sicher ausgelöst werden.";
 "error.permissionResetUnavailable" = "Der Eintrag zur Barrierefreiheit von Menu Hub konnte nicht zurückgesetzt werden. Versuchen Sie es später noch einmal.";
 "error.settingsUnavailable" = "Die Einstellungen sind vorübergehend nicht verfügbar.";
+
+"management.unreadBadge" = "Ungelesen-Badge";
+"management.unreadBadgeAutomatic" = "Automatisch";
+"management.unreadBadgeInclude" = "Immer einbeziehen";
+"management.unreadBadgeExclude" = "Nie einbeziehen";
+"management.unreadBadgeHelp" = "Automatisch zählt nur unterstützte Chat-Apps, wenn macOS eine exakte Zahl anzeigt.";
+"statusItem.unreadFormat" = "Menu Hub, %d ungelesene Nachrichten";
+"statusItem.unreadOverflow" = "Menu Hub, mindestens 99 ungelesene Nachrichten";
+"panel.retry" = "Erneut versuchen";
