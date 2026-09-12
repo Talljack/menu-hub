@@ -185,13 +185,48 @@ final class PanelNavigationTests: XCTestCase {
     }
 
     func testRowOwnedActionMenuStateAcceptsExternalRequestAndDismissesLocally() {
-        var state = HubItemActionMenuState()
-        state.applyExternalRequest(false)
+        var state = HubItemActionPanelState()
+        state.applyExternalRequest(false, alias: "Work")
         XCTAssertFalse(state.isPresented)
-        state.applyExternalRequest(true)
+        state.applyExternalRequest(true, alias: "Work")
         XCTAssertTrue(state.isPresented)
+        XCTAssertEqual(state.aliasDraft, "Work")
         state.dismiss()
         XCTAssertFalse(state.isPresented)
+    }
+
+    func testActionPanelPresentationStartsWithCommandsAndResetsDraft() {
+        var state = HubItemActionPanelState()
+        state.present(alias: "Work")
+        XCTAssertEqual(state.page, .commands)
+        XCTAssertEqual(state.aliasDraft, "Work")
+        XCTAssertFalse(state.showsMoreActions)
+
+        state.showRename()
+        state.aliasDraft = "Changed"
+        state.dismiss()
+        state.present(alias: nil)
+        XCTAssertEqual(state.page, .commands)
+        XCTAssertEqual(state.aliasDraft, "")
+    }
+
+    func testActionPanelEscapeUnwindsInnerStateBeforeDismissal() {
+        var state = HubItemActionPanelState(isPresented: true)
+        state.showRename()
+        XCTAssertEqual(state.handleEscape(), .stayPresented)
+        XCTAssertEqual(state.page, .commands)
+        state.toggleMoreActions()
+        XCTAssertEqual(state.handleEscape(), .stayPresented)
+        XCTAssertFalse(state.showsMoreActions)
+        XCTAssertEqual(state.handleEscape(), .dismiss)
+    }
+
+    func testActionPanelPagesAreMutuallyExclusive() {
+        var state = HubItemActionPanelState(isPresented: true)
+        state.showRename()
+        state.showGroups()
+        XCTAssertEqual(state.page, .groups)
+        XCTAssertFalse(state.showsMoreActions)
     }
 
     private func makeItem(host: String, item: String, alias: String? = nil) -> HubPanelItem {
