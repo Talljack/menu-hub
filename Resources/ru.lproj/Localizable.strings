@@ -69,6 +69,19 @@
 "panel.actionFailed" = "Действие не выполнено";
 "panel.completed" = "Завершено";
 
+"actionPanel.menuBarItem" = "Объект строки меню";
+"actionPanel.ready" = "Готово";
+"actionPanel.quickActions" = "Быстрые действия";
+"actionPanel.customize" = "Настройка";
+"actionPanel.rename" = "Переименовать";
+"actionPanel.groups" = "Группы";
+"actionPanel.moreActions" = "Другие действия";
+"actionPanel.displayName" = "Отображаемое имя";
+"actionPanel.optional" = "Необязательно";
+"actionPanel.keyboardDefault" = "↑↓ Выбор · ↩ Выполнить · Esc Закрыть";
+"actionPanel.keyboardRename" = "Return Сохранить · Esc Отмена";
+"actionPanel.keyboardGroups" = "Пробел Переключить · Esc Назад";
+
 "capability.actionable" = "Доступно действие";
 "capability.openApp" = "Можно открыть приложение";
 "capability.unavailable" = "Недоступно";

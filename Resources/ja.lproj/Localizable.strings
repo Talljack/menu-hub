@@ -69,6 +69,19 @@
 "panel.actionFailed" = "アクションが失敗しました";
 "panel.completed" = "完了しました";
 
+"actionPanel.menuBarItem" = "メニューバー項目";
+"actionPanel.ready" = "使用可能";
+"actionPanel.quickActions" = "クイックアクション";
+"actionPanel.customize" = "カスタマイズ";
+"actionPanel.rename" = "名前を変更";
+"actionPanel.groups" = "グループ";
+"actionPanel.moreActions" = "その他のアクション";
+"actionPanel.displayName" = "表示名";
+"actionPanel.optional" = "任意";
+"actionPanel.keyboardDefault" = "↑↓ 選択 · ↩ 実行 · Esc 閉じる";
+"actionPanel.keyboardRename" = "Return 保存 · Esc キャンセル";
+"actionPanel.keyboardGroups" = "Space 切り替え · Esc 戻る";
+
 "capability.actionable" = "操作可能";
 "capability.openApp" = "アプリを開くことができます";
 "capability.unavailable" = "利用不可";

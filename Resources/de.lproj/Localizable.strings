@@ -69,6 +69,19 @@
 "panel.actionFailed" = "Aktion fehlgeschlagen";
 "panel.completed" = "Abgeschlossen";
 
+"actionPanel.menuBarItem" = "Menüleistenobjekt";
+"actionPanel.ready" = "Bereit";
+"actionPanel.quickActions" = "Schnellaktionen";
+"actionPanel.customize" = "Anpassen";
+"actionPanel.rename" = "Umbenennen";
+"actionPanel.groups" = "Gruppen";
+"actionPanel.moreActions" = "Weitere Aktionen";
+"actionPanel.displayName" = "Anzeigename";
+"actionPanel.optional" = "Optional";
+"actionPanel.keyboardDefault" = "↑↓ Auswählen · ↩ Aktivieren · Esc Schließen";
+"actionPanel.keyboardRename" = "Return Sichern · Esc Abbrechen";
+"actionPanel.keyboardGroups" = "Leertaste Umschalten · Esc Zurück";
+
 "capability.actionable" = "Bedienbar";
 "capability.openApp" = "Kann App öffnen";
 "capability.unavailable" = "Nicht verfügbar";

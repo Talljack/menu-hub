@@ -69,6 +69,19 @@
 "panel.actionFailed" = "Action Failed";
 "panel.completed" = "Completed";
 
+"actionPanel.menuBarItem" = "Menu Bar Item";
+"actionPanel.ready" = "Ready";
+"actionPanel.quickActions" = "Quick Actions";
+"actionPanel.customize" = "Customize";
+"actionPanel.rename" = "Rename";
+"actionPanel.groups" = "Groups";
+"actionPanel.moreActions" = "More Actions";
+"actionPanel.displayName" = "Display Name";
+"actionPanel.optional" = "Optional";
+"actionPanel.keyboardDefault" = "↑↓ Select · ↩ Activate · Esc Close";
+"actionPanel.keyboardRename" = "Return Save · Esc Cancel";
+"actionPanel.keyboardGroups" = "Space Toggle · Esc Back";
+
 "capability.actionable" = "Actionable";
 "capability.openApp" = "Can Open App";
 "capability.unavailable" = "Unavailable";

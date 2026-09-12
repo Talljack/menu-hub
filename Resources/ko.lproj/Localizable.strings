@@ -69,6 +69,19 @@
 "panel.actionFailed" = "작업 실패";
 "panel.completed" = "완료됨";
 
+"actionPanel.menuBarItem" = "메뉴 막대 항목";
+"actionPanel.ready" = "사용 가능";
+"actionPanel.quickActions" = "빠른 동작";
+"actionPanel.customize" = "사용자화";
+"actionPanel.rename" = "이름 변경";
+"actionPanel.groups" = "그룹";
+"actionPanel.moreActions" = "추가 동작";
+"actionPanel.displayName" = "표시 이름";
+"actionPanel.optional" = "선택 사항";
+"actionPanel.keyboardDefault" = "↑↓ 선택 · ↩ 실행 · Esc 닫기";
+"actionPanel.keyboardRename" = "Return 저장 · Esc 취소";
+"actionPanel.keyboardGroups" = "Space 전환 · Esc 뒤로";
+
 "capability.actionable" = "실행 가능";
 "capability.openApp" = "앱을 열 수 있음";
 "capability.unavailable" = "이용 불가";

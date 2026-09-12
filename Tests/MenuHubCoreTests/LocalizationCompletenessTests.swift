@@ -50,6 +50,18 @@ struct LocalizationCompletenessTests {
             "statusItem.unreadFormat",
             "statusItem.unreadOverflow",
             "panel.retry",
+            "actionPanel.menuBarItem",
+            "actionPanel.ready",
+            "actionPanel.quickActions",
+            "actionPanel.customize",
+            "actionPanel.rename",
+            "actionPanel.groups",
+            "actionPanel.moreActions",
+            "actionPanel.displayName",
+            "actionPanel.optional",
+            "actionPanel.keyboardDefault",
+            "actionPanel.keyboardRename",
+            "actionPanel.keyboardGroups",
         ]
         for key in requiredKeys {
             #expect(keys.contains(key), "Missing required localization: \(key)")
