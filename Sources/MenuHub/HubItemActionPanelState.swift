@@ -11,6 +11,20 @@ enum HubItemActionPanelEscapeResult: Equatable {
     case dismiss
 }
 
+struct HubItemActionPanelConfiguration: Equatable {
+    let canOpenHost: Bool
+    let hasGroups: Bool
+    let isInvoking: Bool
+
+    func visibleCommands(showsMore: Bool) -> [HubItemActionPanelCommand] {
+        HubItemActionPanelCommand.visible(
+            canOpenHost: canOpenHost,
+            hasGroups: hasGroups,
+            showsMore: showsMore
+        )
+    }
+}
+
 struct HubItemActionPanelState: Equatable {
     var isPresented: Bool
     private(set) var page: HubItemActionPanelPage = .commands

@@ -255,6 +255,13 @@ final class PanelNavigationTests: XCTestCase {
         )
     }
 
+    func testActionPanelConfigurationIsIndependentOfCatalogLayout() {
+        let row = HubItemActionPanelConfiguration(canOpenHost: true, hasGroups: true, isInvoking: false)
+        let grid = HubItemActionPanelConfiguration(canOpenHost: true, hasGroups: true, isInvoking: false)
+        XCTAssertEqual(row.visibleCommands(showsMore: false), grid.visibleCommands(showsMore: false))
+        XCTAssertEqual(row.visibleCommands(showsMore: true), grid.visibleCommands(showsMore: true))
+    }
+
     private func makeItem(host: String, item: String, alias: String? = nil) -> HubPanelItem {
         let record = MenuBarItemRecord(
             id: item, identity: .init(bundleIdentifier: "com.example", originalName: item, axIdentifier: item, path: [0]),
