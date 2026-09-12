@@ -94,6 +94,10 @@ Catalogs, favorites, aliases, groups, preferences, and usage history stay on thi
 
 Menu Hub does not send analytics or user data anywhere. Diagnostics are exported only after you choose a destination and redact or hash home paths, user names, search text, and stable item identifiers.
 
+## Security
+
+Menu Hub is released under the [MIT License](LICENSE). Please report suspected vulnerabilities privately by following the [Security Policy](SECURITY.md); do not disclose security-sensitive details in a public issue.
+
 ## Public API limitations
 
 macOS does not provide a public API that guarantees discovery, movement, hiding, or proxy activation for every third-party menu bar item. Menu Hub uses a transparent variable-width `NSStatusItem` for layout space and Accessibility APIs for discovery and activation.
