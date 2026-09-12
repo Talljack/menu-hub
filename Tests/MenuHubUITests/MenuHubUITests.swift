@@ -110,7 +110,7 @@ final class MenuHubUITests: XCTestCase {
         app.typeKey(.downArrow, modifierFlags: [])
         app.typeKey("k", modifierFlags: .command)
 
-        XCTAssertTrue(element(identifier: "hub.item.actions.lark").waitForExistence(timeout: 3))
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForExistence(timeout: 3))
     }
 
     func testUnreadFixtureKeepsPanelInteractionAvailable() {
@@ -120,7 +120,27 @@ final class MenuHubUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Lark — 6"].exists)
         app.typeKey(.downArrow, modifierFlags: [])
         app.typeKey("k", modifierFlags: .command)
-        XCTAssertTrue(element(identifier: "hub.item.actions.lark").waitForExistence(timeout: 3))
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForExistence(timeout: 3))
+    }
+
+    func testGlassActionPanelSupportsRenameAndLayeredEscapeInIconGrid() {
+        launch(permission: "authorized", catalog: "mixed", language: "en", layout: "grid", reset: true)
+        XCTAssertTrue(element(identifier: "hub.search").waitForExistence(timeout: 5))
+
+        app.typeKey(.downArrow, modifierFlags: [])
+        app.typeKey("k", modifierFlags: .command)
+
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["hub.item.actions.primary"].exists)
+        XCTAssertTrue(app.buttons["hub.item.actions.rename"].exists)
+        XCTAssertTrue(app.buttons["hub.item.actions.more"].exists)
+
+        app.buttons["hub.item.actions.rename"].click()
+        XCTAssertTrue(element(identifier: "hub.item.actions.aliasField").waitForExistence(timeout: 2))
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(app.buttons["hub.item.actions.primary"].waitForExistence(timeout: 2))
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForNonExistence(timeout: 2))
     }
 
     func testFailedGridActionExposesRetryAndOpenApp() {
