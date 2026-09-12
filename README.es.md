@@ -35,6 +35,8 @@ Si ya está activado pero Menu Hub sigue sin acceso, elige **Reparar permiso** e
 
 ## Uso
 
+Con el permiso de Accesibilidad, Menu Hub superpone un contador monocromo del total sin leer dentro de su icono de ancho fijo. Solo suma números exactos expuestos por macOS; un punto sin número cuenta como cero. En **Ajustes > Elementos y grupos** puedes configurar cada elemento como Automático, Incluir siempre o No incluir.
+
 - Haz clic en el icono de cuatro pétalos para abrir o cerrar el panel. Haz Option-clic para ocultar o mostrar el área gestionada.
 - Pulsa `⌥M` desde cualquier aplicación. Puedes cambiarlo en **Ajustes > Atajos**.
 - Busca por aplicación o elemento y haz clic en un resultado para ejecutar su acción normal.

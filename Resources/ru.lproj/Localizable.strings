@@ -69,6 +69,19 @@
 "panel.actionFailed" = "Действие не выполнено";
 "panel.completed" = "Завершено";
 
+"actionPanel.menuBarItem" = "Объект строки меню";
+"actionPanel.ready" = "Готово";
+"actionPanel.quickActions" = "Быстрые действия";
+"actionPanel.customize" = "Настройка";
+"actionPanel.rename" = "Переименовать";
+"actionPanel.groups" = "Группы";
+"actionPanel.moreActions" = "Другие действия";
+"actionPanel.displayName" = "Отображаемое имя";
+"actionPanel.optional" = "Необязательно";
+"actionPanel.keyboardDefault" = "↑↓ Выбор · ↩ Выполнить · Esc Закрыть";
+"actionPanel.keyboardRename" = "Return Сохранить · Esc Отмена";
+"actionPanel.keyboardGroups" = "Пробел Переключить · Esc Назад";
+
 "capability.actionable" = "Доступно действие";
 "capability.openApp" = "Можно открыть приложение";
 "capability.unavailable" = "Недоступно";
@@ -238,3 +251,12 @@
 "error.unavailable" = "Предмет не может быть активирован безопасно прямо сейчас.";
 "error.permissionResetUnavailable" = "Не удалось сбросить запись о доступности Menu Hub. Повторите попытку позже.";
 "error.settingsUnavailable" = "Настройки временно недоступны.";
+
+"management.unreadBadge" = "Счётчик непрочитанных";
+"management.unreadBadgeAutomatic" = "Автоматически";
+"management.unreadBadgeInclude" = "Всегда учитывать";
+"management.unreadBadgeExclude" = "Не учитывать";
+"management.unreadBadgeHelp" = "Автоматически учитываются только поддерживаемые чаты, для которых macOS показывает точное число.";
+"statusItem.unreadFormat" = "Menu Hub: %d непрочитанных сообщений";
+"statusItem.unreadOverflow" = "Menu Hub: не менее 99 непрочитанных сообщений";
+"panel.retry" = "Повторить";

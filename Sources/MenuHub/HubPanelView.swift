@@ -64,9 +64,9 @@ struct HubPanelView: View {
         .background(PanelKeyboardMonitor { event in handleKeyEvent(event) })
         .onAppear {
             searchFocused = true
-            model.startLiveUpdates()
+            model.panelDidAppear()
         }
-        .onDisappear { model.stopLiveUpdates() }
+        .onDisappear { model.panelDidDisappear() }
     }
 
     @ViewBuilder private var panelBackground: some View {

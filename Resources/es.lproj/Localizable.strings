@@ -69,6 +69,19 @@
 "panel.actionFailed" = "Acción fallida";
 "panel.completed" = "Completado";
 
+"actionPanel.menuBarItem" = "Ítem de la barra de menús";
+"actionPanel.ready" = "Disponible";
+"actionPanel.quickActions" = "Acciones rápidas";
+"actionPanel.customize" = "Personalizar";
+"actionPanel.rename" = "Renombrar";
+"actionPanel.groups" = "Grupos";
+"actionPanel.moreActions" = "Más acciones";
+"actionPanel.displayName" = "Nombre para mostrar";
+"actionPanel.optional" = "Opcional";
+"actionPanel.keyboardDefault" = "↑↓ Seleccionar · ↩ Activar · Esc Cerrar";
+"actionPanel.keyboardRename" = "Return Guardar · Esc Cancelar";
+"actionPanel.keyboardGroups" = "Espacio Cambiar · Esc Atrás";
+
 "capability.actionable" = "Accionable";
 "capability.openApp" = "Puede abrir la aplicación";
 "capability.unavailable" = "No disponible";
@@ -238,3 +251,12 @@
 "error.unavailable" = "El elemento no se puede activar de forma segura en este momento.";
 "error.permissionResetUnavailable" = "No se pudo restablecer el registro de accesibilidad de Menu Hub. Vuelve a intentarlo más tarde.";
 "error.settingsUnavailable" = "La configuración no está disponible temporalmente.";
+
+"management.unreadBadge" = "Indicador de no leídos";
+"management.unreadBadgeAutomatic" = "Automático";
+"management.unreadBadgeInclude" = "Incluir siempre";
+"management.unreadBadgeExclude" = "No incluir";
+"management.unreadBadgeHelp" = "El modo automático solo suma apps de chat compatibles cuando macOS muestra un número exacto.";
+"statusItem.unreadFormat" = "Menu Hub, %d mensajes sin leer";
+"statusItem.unreadOverflow" = "Menu Hub, 99 o más mensajes sin leer";
+"panel.retry" = "Reintentar";

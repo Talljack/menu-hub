@@ -43,16 +43,16 @@ struct HubItemActionGroup: Identifiable, Equatable {
     let isMember: Bool
 }
 
-struct HubItemActionMenuState: Equatable {
-    var isPresented = false
-    mutating func applyExternalRequest(_ requested: Bool) { if requested { isPresented = true } }
-    mutating func toggle() { isPresented.toggle() }
-    mutating func dismiss() { isPresented = false }
-}
-
 enum HubItemLayoutStyle: Equatable {
     case row
     case grid
+}
+
+enum HubItemActionLabel {
+    static func primary(hasFailure: Bool, isLaunchOnly: Bool) -> String {
+        if hasFailure { return L("panel.retry") }
+        return L(isLaunchOnly ? "panel.openApp" : "panel.defaultAction")
+    }
 }
 
 struct HubItemRow: View {
@@ -76,8 +76,7 @@ struct HubItemRow: View {
     let showsCapability: Bool
     let layoutStyle: HubItemLayoutStyle
     @State private var isHovering = false
-    @State private var aliasDraft: String
-    @State private var actionMenuState = HubItemActionMenuState()
+    @State private var actionMenuState = HubItemActionPanelState()
 
     init(
         item: HubPanelItem, isSelected: Bool, isInvoking: Bool, hasFailure: Bool, hasSucceeded: Bool,
@@ -100,7 +99,6 @@ struct HubItemRow: View {
         self.openManagement = openManagement
         self.showsCapability = showsCapability
         self.layoutStyle = layoutStyle
-        _aliasDraft = State(initialValue: item.record.alias ?? "")
     }
 
     var body: some View {
@@ -113,9 +111,9 @@ struct HubItemRow: View {
         .onHover { isHovering = $0 }
         .contextMenu { sharedMenuActions }
         .accessibilityIdentifier("hub.item.\(item.id)")
-        .onAppear { actionMenuState.applyExternalRequest(isActionMenuRequested) }
+        .onAppear { actionMenuState.applyExternalRequest(isActionMenuRequested, alias: item.record.alias) }
         .onChange(of: isActionMenuRequested) { _, requested in
-            actionMenuState.applyExternalRequest(requested)
+            actionMenuState.applyExternalRequest(requested, alias: item.record.alias)
         }
         .onChange(of: actionMenuState.isPresented) { wasPresented, isPresented in
             if wasPresented && !isPresented { actionMenuDidDismiss() }
@@ -183,7 +181,7 @@ struct HubItemRow: View {
     }
 
     private var actionMenuButton: some View {
-        Button { actionMenuState.toggle() } label: {
+        Button { actionMenuState.toggle(alias: item.record.alias) } label: {
             Group {
                 if isInvoking { ProgressView().controlSize(.small) }
                 else if hasFailure { Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red) }
@@ -199,56 +197,36 @@ struct HubItemRow: View {
         .accessibilityValue(accessibility.value)
         .accessibilityHint(accessibility.help)
         .help(accessibility.help)
-        .popover(isPresented: $actionMenuState.isPresented, arrowEdge: .trailing) { actionPopover }
-    }
-
-    private var actionPopover: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Button(L(item.isLaunchOnly ? "panel.openApp" : "panel.defaultAction")) { actionMenuState.dismiss(); action() }
-                .disabled(!item.canInvoke || isInvoking)
-            if canOpenHost {
-                Button(L("panel.openHost")) { actionMenuState.dismiss(); openHost() }
-                    .disabled(isInvoking)
-            }
-            Divider()
-            Button(L(item.record.isFavorite ? "panel.unfavorite" : "panel.favorite")) { actionMenuState.dismiss(); toggleFavorite() }
-            aliasEditor
-            if !groups.isEmpty {
-                Divider()
-                Text(L("panel.addToGroup")).font(.caption).foregroundStyle(.secondary)
-                ForEach(groups) { group in
-                    Button { setMembership(group.id, !group.isMember) } label: {
-                        Label(group.name, systemImage: group.isMember ? "checkmark.circle.fill" : "circle")
-                    }
-                }
-            }
-            Divider()
-            Button(L("panel.ignoreItem"), role: .destructive) { actionMenuState.dismiss(); ignore() }
-            Button(L("panel.retest")) { actionMenuState.dismiss(); retestCapability() }
-            Button(L("panel.showInManagement")) { actionMenuState.dismiss(); openManagement() }
-        }
-        .buttonStyle(.plain)
-        .padding(10)
-        .frame(minWidth: 150, alignment: .leading)
-        .accessibilityIdentifier("hub.item.actions.\(item.id)")
-    }
-
-    private var aliasEditor: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(L("panel.alias")).font(.caption).foregroundStyle(.secondary)
-            TextField(L("panel.aliasPlaceholder"), text: $aliasDraft).textFieldStyle(.roundedBorder)
-            HStack {
-                Button(L("common.clear")) { aliasDraft = ""; saveAlias(nil) }
-                Button(L("common.save")) { saveAlias(aliasDraft) }.buttonStyle(.borderedProminent)
-            }
+        .popover(isPresented: $actionMenuState.isPresented, arrowEdge: .trailing) {
+            HubItemActionPanel(
+                item: item,
+                canOpenHost: canOpenHost,
+                groups: groups,
+                isInvoking: isInvoking,
+                hasFailure: hasFailure,
+                primaryAction: action,
+                openHost: openHost,
+                toggleFavorite: toggleFavorite,
+                saveAlias: saveAlias,
+                setMembership: setMembership,
+                ignore: ignore,
+                retestCapability: retestCapability,
+                openManagement: openManagement,
+                dismiss: { actionMenuState.dismiss() },
+                state: $actionMenuState
+            )
         }
     }
 
     @ViewBuilder private var sharedMenuActions: some View {
-        Button(L(item.isLaunchOnly ? "panel.openApp" : "panel.defaultAction"), action: action).disabled(!item.canInvoke || isInvoking)
+        Button(HubItemActionLabel.primary(hasFailure: hasFailure, isLaunchOnly: item.isLaunchOnly), action: action)
+            .disabled(!item.canInvoke || isInvoking)
         if canOpenHost { Button(L("panel.openHost"), action: openHost).disabled(isInvoking) }
         Button(L(item.record.isFavorite ? "panel.unfavorite" : "panel.favorite"), action: toggleFavorite)
-        Button(L("panel.editAlias")) { actionMenuState.applyExternalRequest(true) }
+        Button(L("panel.editAlias")) {
+            actionMenuState.present(alias: item.record.alias)
+            actionMenuState.showRename()
+        }
         if !groups.isEmpty {
             Menu(L("panel.addToGroup")) {
                 ForEach(groups) { group in

@@ -69,6 +69,19 @@
 "panel.actionFailed" = "L'action a échoué";
 "panel.completed" = "Terminé";
 
+"actionPanel.menuBarItem" = "Élément de la barre des menus";
+"actionPanel.ready" = "Disponible";
+"actionPanel.quickActions" = "Actions rapides";
+"actionPanel.customize" = "Personnaliser";
+"actionPanel.rename" = "Renommer";
+"actionPanel.groups" = "Groupes";
+"actionPanel.moreActions" = "Plus d’actions";
+"actionPanel.displayName" = "Nom affiché";
+"actionPanel.optional" = "Facultatif";
+"actionPanel.keyboardDefault" = "↑↓ Sélectionner · ↩ Activer · Esc Fermer";
+"actionPanel.keyboardRename" = "Return Enregistrer · Esc Annuler";
+"actionPanel.keyboardGroups" = "Espace Basculer · Esc Retour";
+
 "capability.actionable" = "Actionnable";
 "capability.openApp" = "Peut ouvrir l'application";
 "capability.unavailable" = "Indisponible";
@@ -238,3 +251,12 @@
 "error.unavailable" = "L'objet ne peut pas être déclenché en toute sécurité pour le moment.";
 "error.permissionResetUnavailable" = "L'enregistrement d'accessibilité de Menu Hub n'a pas pu être réinitialisé. Réessayez plus tard.";
 "error.settingsUnavailable" = "Les paramètres sont temporairement indisponibles.";
+
+"management.unreadBadge" = "Badge de messages non lus";
+"management.unreadBadgeAutomatic" = "Automatique";
+"management.unreadBadgeInclude" = "Toujours inclure";
+"management.unreadBadgeExclude" = "Ne jamais inclure";
+"management.unreadBadgeHelp" = "Le mode automatique compte uniquement les apps de discussion prises en charge quand macOS affiche un nombre exact.";
+"statusItem.unreadFormat" = "Menu Hub, %d messages non lus";
+"statusItem.unreadOverflow" = "Menu Hub, 99 messages non lus ou plus";
+"panel.retry" = "Réessayer";

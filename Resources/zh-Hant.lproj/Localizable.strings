@@ -69,6 +69,19 @@
 "panel.actionFailed" = "操作失敗";
 "panel.completed" = "已完成";
 
+"actionPanel.menuBarItem" = "選單列項目";
+"actionPanel.ready" = "就緒";
+"actionPanel.quickActions" = "快速操作";
+"actionPanel.customize" = "自訂";
+"actionPanel.rename" = "重新命名";
+"actionPanel.groups" = "群組";
+"actionPanel.moreActions" = "更多操作";
+"actionPanel.displayName" = "顯示名稱";
+"actionPanel.optional" = "選填";
+"actionPanel.keyboardDefault" = "↑↓ 選擇 · ↩ 執行 · Esc 關閉";
+"actionPanel.keyboardRename" = "Return 儲存 · Esc 取消";
+"actionPanel.keyboardGroups" = "空白鍵切換 · Esc 返回";
+
 "capability.actionable" = "可操作";
 "capability.openApp" = "可以打開應用程式";
 "capability.unavailable" = "不可用";
@@ -238,3 +251,12 @@
 "error.unavailable" = "目前無法安全觸發該物品。";
 "error.permissionResetUnavailable" = "Menu Hub 的輔助使用記錄無法重設。稍後再試。";
 "error.settingsUnavailable" = "設定暫時不可用。";
+
+"management.unreadBadge" = "未讀提醒";
+"management.unreadBadgeAutomatic" = "自動";
+"management.unreadBadgeInclude" = "一律計入";
+"management.unreadBadgeExclude" = "永不計入";
+"management.unreadBadgeHelp" = "自動模式只支援聊天 App，且僅在 macOS 顯示準確數字標題時計入。";
+"statusItem.unreadFormat" = "Menu Hub，%d 則未讀訊息";
+"statusItem.unreadOverflow" = "Menu Hub，至少 99 則未讀訊息";
+"panel.retry" = "重試";

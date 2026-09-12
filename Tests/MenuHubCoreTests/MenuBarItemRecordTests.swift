@@ -160,6 +160,34 @@ final class MenuBarItemRecordTests: XCTestCase {
         XCTAssertEqual(decoded.identity.bundleIdentifier, "com.example.app")
     }
 
+    func testRecordDecodesLegacyJSONWithoutUnreadBadgePreferenceAsAutomatic() throws {
+        var record = makeRecord(alias: nil)
+        record.unreadBadgePreference = .include
+        let encoded = try JSONEncoder().encode(record)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        object.removeValue(forKey: "unreadBadgePreference")
+
+        let decoded = try JSONDecoder().decode(
+            MenuBarItemRecord.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertEqual(decoded.unreadBadgePreference, .automatic)
+    }
+
+    func testRecordDecodesUnknownUnreadBadgePreferenceAsAutomatic() throws {
+        let encoded = try JSONEncoder().encode(makeRecord(alias: nil))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        object["unreadBadgePreference"] = "future-policy"
+
+        let decoded = try JSONDecoder().decode(
+            MenuBarItemRecord.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertEqual(decoded.unreadBadgePreference, .automatic)
+    }
+
     private func makeRecord(alias: String?) -> MenuBarItemRecord {
         let identity = MenuBarItemIdentity(
             processIdentifier: 42,

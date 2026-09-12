@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let hubItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let spacerItem = NSStatusBar.system.statusItem(withLength: 1)
     private let accessibilityClient = AccessibilityClient()
+    private let statusItemBadgeRenderer = StatusItemBadgeRenderer()
     private let diagnosticsController = DiagnosticsController()
     #if DEBUG
     private let uiTestRuntime = UITestRuntime.current
@@ -126,6 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         registerPersistedHotKeyWhenLoaded()
         #endif
         permissionCoordinator.start()
+        panelModel.startBackgroundUpdates()
         observeDiagnostics()
         observeSafetyEvents()
         spacerItem.length = state.currentWidth
@@ -162,6 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         permissionCoordinator.stop()
+        panelModel.stopMonitoring()
         panelModel.shutdown()
         hotKeyController.shutdown()
         let wasHidden = state.visibility == .hidden
@@ -193,16 +196,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func configureStatusItems() {
+        hubItem.autosaveName = StatusItemIdentity.primaryAutosaveName
+        spacerItem.autosaveName = StatusItemIdentity.spacerAutosaveName
         if let button = hubItem.button {
-            button.image = MenuBarIconFactory.makeImage()
-            button.imagePosition = .imageOnly
-            button.title = ""
+            statusItemBadgeRenderer.apply(.hidden, to: hubItem, button: button)
             button.toolTip = L("common.appName")
             button.setAccessibilityLabel(L("common.appName"))
             button.target = self
             button.action = #selector(handleHubClick(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
+        panelModel.$unreadBadgePresentation
+            .removeDuplicates()
+            .sink { [weak self] presentation in
+                guard let self, let button = hubItem.button else { return }
+                statusItemBadgeRenderer.apply(presentation, to: hubItem, button: button)
+                let description: String
+                switch presentation {
+                case .hidden: description = L("common.appName")
+                case let .count(value): description = L("statusItem.unreadFormat", value)
+                case .overflow: description = L("statusItem.unreadOverflow")
+                }
+                button.toolTip = description
+                button.setAccessibilityLabel(description)
+            }
+            .store(in: &diagnosticSubscriptions)
         updateSpacerAppearance()
     }
 
@@ -215,6 +233,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func handleSafetyEvent() {
         revealItems(immediate: true)
+        panelModel.applicationSetDidChange()
     }
 
     @objc private func handleApplicationSetChange() {

@@ -5,6 +5,10 @@ import XCTest
 
 @MainActor
 final class PanelNavigationTests: XCTestCase {
+    func testFailedActionUsesRetryLabelWithoutRemovingOpenHostAction() {
+        XCTAssertEqual(HubItemActionLabel.primary(hasFailure: true, isLaunchOnly: false), L("panel.retry"))
+        XCTAssertEqual(HubItemActionLabel.primary(hasFailure: false, isLaunchOnly: true), L("panel.openApp"))
+    }
     func testDisplayTitleAlwaysLeadsWithResolvedHostName() {
         XCTAssertEqual(makeItem(host: "WeChat", item: "WeChat").primaryTitle, "WeChat")
         XCTAssertEqual(makeItem(host: "飞书", item: "6").primaryTitle, "飞书 — 6")
@@ -181,13 +185,81 @@ final class PanelNavigationTests: XCTestCase {
     }
 
     func testRowOwnedActionMenuStateAcceptsExternalRequestAndDismissesLocally() {
-        var state = HubItemActionMenuState()
-        state.applyExternalRequest(false)
+        var state = HubItemActionPanelState()
+        state.applyExternalRequest(false, alias: "Work")
         XCTAssertFalse(state.isPresented)
-        state.applyExternalRequest(true)
+        state.applyExternalRequest(true, alias: "Work")
         XCTAssertTrue(state.isPresented)
+        XCTAssertEqual(state.aliasDraft, "Work")
         state.dismiss()
         XCTAssertFalse(state.isPresented)
+    }
+
+    func testActionPanelPresentationStartsWithCommandsAndResetsDraft() {
+        var state = HubItemActionPanelState()
+        state.present(alias: "Work")
+        XCTAssertEqual(state.page, .commands)
+        XCTAssertEqual(state.aliasDraft, "Work")
+        XCTAssertFalse(state.showsMoreActions)
+
+        state.showRename()
+        state.aliasDraft = "Changed"
+        state.dismiss()
+        state.present(alias: nil)
+        XCTAssertEqual(state.page, .commands)
+        XCTAssertEqual(state.aliasDraft, "")
+    }
+
+    func testActionPanelEscapeUnwindsInnerStateBeforeDismissal() {
+        var state = HubItemActionPanelState(isPresented: true)
+        state.showRename()
+        XCTAssertEqual(state.handleEscape(), .stayPresented)
+        XCTAssertEqual(state.page, .commands)
+        state.toggleMoreActions()
+        XCTAssertEqual(state.handleEscape(), .stayPresented)
+        XCTAssertFalse(state.showsMoreActions)
+        XCTAssertEqual(state.handleEscape(), .dismiss)
+    }
+
+    func testActionPanelPagesAreMutuallyExclusive() {
+        var state = HubItemActionPanelState(isPresented: true)
+        state.showRename()
+        state.showGroups()
+        XCTAssertEqual(state.page, .groups)
+        XCTAssertFalse(state.showsMoreActions)
+    }
+
+    func testActionPanelSurfaceUsesOpaqueFallbackWhenTransparencyIsReduced() {
+        XCTAssertEqual(
+            HubActionPanelSurfaceMode.resolve(reduceTransparency: true, supportsLiquidGlass: true),
+            .solid
+        )
+        XCTAssertEqual(
+            HubActionPanelSurfaceMode.resolve(reduceTransparency: false, supportsLiquidGlass: false),
+            .material
+        )
+        XCTAssertEqual(
+            HubActionPanelSurfaceMode.resolve(reduceTransparency: false, supportsLiquidGlass: true),
+            .liquidGlass
+        )
+    }
+
+    func testActionPanelCommandsReflectCapabilitiesAndExpansion() {
+        XCTAssertEqual(
+            HubItemActionPanelCommand.visible(canOpenHost: true, hasGroups: true, showsMore: false),
+            [.primary, .openHost, .favorite, .rename, .groups, .more]
+        )
+        XCTAssertEqual(
+            HubItemActionPanelCommand.visible(canOpenHost: false, hasGroups: false, showsMore: true),
+            [.primary, .favorite, .rename, .more, .retest, .management, .ignore]
+        )
+    }
+
+    func testActionPanelConfigurationIsIndependentOfCatalogLayout() {
+        let row = HubItemActionPanelConfiguration(canOpenHost: true, hasGroups: true, isInvoking: false)
+        let grid = HubItemActionPanelConfiguration(canOpenHost: true, hasGroups: true, isInvoking: false)
+        XCTAssertEqual(row.visibleCommands(showsMore: false), grid.visibleCommands(showsMore: false))
+        XCTAssertEqual(row.visibleCommands(showsMore: true), grid.visibleCommands(showsMore: true))
     }
 
     private func makeItem(host: String, item: String, alias: String? = nil) -> HubPanelItem {

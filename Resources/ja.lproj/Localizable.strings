@@ -69,6 +69,19 @@
 "panel.actionFailed" = "アクションが失敗しました";
 "panel.completed" = "完了しました";
 
+"actionPanel.menuBarItem" = "メニューバー項目";
+"actionPanel.ready" = "使用可能";
+"actionPanel.quickActions" = "クイックアクション";
+"actionPanel.customize" = "カスタマイズ";
+"actionPanel.rename" = "名前を変更";
+"actionPanel.groups" = "グループ";
+"actionPanel.moreActions" = "その他のアクション";
+"actionPanel.displayName" = "表示名";
+"actionPanel.optional" = "任意";
+"actionPanel.keyboardDefault" = "↑↓ 選択 · ↩ 実行 · Esc 閉じる";
+"actionPanel.keyboardRename" = "Return 保存 · Esc キャンセル";
+"actionPanel.keyboardGroups" = "Space 切り替え · Esc 戻る";
+
 "capability.actionable" = "操作可能";
 "capability.openApp" = "アプリを開くことができます";
 "capability.unavailable" = "利用不可";
@@ -238,3 +251,12 @@
 "error.unavailable" = "現在、アイテムを安全にトリガーできません。";
 "error.permissionResetUnavailable" = "Menu Hub のアクセシビリティ レコードをリセットできませんでした。後でもう一度試してください。";
 "error.settingsUnavailable" = "設定は一時的に利用できなくなります。";
+
+"management.unreadBadge" = "未読バッジ";
+"management.unreadBadgeAutomatic" = "自動";
+"management.unreadBadgeInclude" = "常に含める";
+"management.unreadBadgeExclude" = "含めない";
+"management.unreadBadgeHelp" = "自動では、macOS が正確な数字を表示する対応チャットアプリだけを集計します。";
+"statusItem.unreadFormat" = "Menu Hub、未読メッセージ %d 件";
+"statusItem.unreadOverflow" = "Menu Hub、未読メッセージ 99 件以上";
+"panel.retry" = "再試行";

@@ -3,6 +3,21 @@ import ApplicationServices
 @testable import MenuHubCore
 
 final class AccessibilityPipelineTests: XCTestCase {
+    func testApplicationInspectionExcludesTheScannerProcessItself() {
+        let appURL = URL(fileURLWithPath: "/Applications/Menu Hub.app")
+
+        XCTAssertFalse(AccessibilityClient.shouldInspect(
+            processIdentifier: 42,
+            currentProcessIdentifier: 42,
+            bundleURL: appURL
+        ))
+        XCTAssertTrue(AccessibilityClient.shouldInspect(
+            processIdentifier: 43,
+            currentProcessIdentifier: 42,
+            bundleURL: appURL
+        ))
+    }
+
     func testAXReadIssueClassificationTreatsExpectedAbsenceAsNormal() {
         XCTAssertNil(AccessibilityScanIssue.issue(
             for: .noValue,
@@ -260,6 +275,19 @@ final class AccessibilityPipelineTests: XCTestCase {
         try? await Task.sleep(for: .milliseconds(120))
         let lateCounts = await accessibility.counts
         XCTAssertEqual(lateCounts.scan, 0)
+    }
+
+    func testDefaultPressAllowsSlowButResponsiveTarget() async {
+        let accessibility = FakeAccessibility(pressDelay: .milliseconds(700))
+        let outcome = await ActionExecutor(
+            accessibility: accessibility,
+            launcher: FakeLauncher(result: true)
+        ).execute(item(), snapshot: snapshot())
+
+        XCTAssertEqual(outcome, .pressed)
+        let counts = await accessibility.counts
+        XCTAssertEqual(counts.press, 1)
+        XCTAssertEqual(counts.scan, 0)
     }
 
     func testRefreshScanTimeoutDoesNotPerformRetryPress() async {

@@ -50,6 +50,14 @@ public extension CatalogDocument {
     }
 
     @discardableResult
+    mutating func setUnreadBadgePreference(_ preference: UnreadBadgePreference, forItemID itemID: String) -> Bool {
+        guard let index = items.firstIndex(where: { $0.id == itemID }),
+              items[index].unreadBadgePreference != preference else { return false }
+        items[index].unreadBadgePreference = preference
+        return true
+    }
+
+    @discardableResult
     mutating func setMembership(_ member: Bool, itemID: String, groupID: UUID) -> Bool {
         guard groups.contains(where: { $0.id == groupID }),
               let index = items.firstIndex(where: { $0.id == itemID }) else { return false }

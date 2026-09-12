@@ -69,6 +69,19 @@
 "panel.actionFailed" = "操作失败";
 "panel.completed" = "已完成";
 
+"actionPanel.menuBarItem" = "菜单栏项目";
+"actionPanel.ready" = "就绪";
+"actionPanel.quickActions" = "快捷操作";
+"actionPanel.customize" = "自定义";
+"actionPanel.rename" = "重命名";
+"actionPanel.groups" = "分组";
+"actionPanel.moreActions" = "更多操作";
+"actionPanel.displayName" = "显示名称";
+"actionPanel.optional" = "可选";
+"actionPanel.keyboardDefault" = "↑↓ 选择 · ↩ 执行 · Esc 关闭";
+"actionPanel.keyboardRename" = "Return 保存 · Esc 取消";
+"actionPanel.keyboardGroups" = "空格切换 · Esc 返回";
+
 "capability.actionable" = "可触发";
 "capability.openApp" = "可打开 App";
 "capability.unavailable" = "不可用";
@@ -238,3 +251,12 @@
 "error.unavailable" = "项目目前无法安全触发。";
 "error.permissionResetUnavailable" = "无法重置 Menu Hub 的辅助功能记录，请稍后重试。";
 "error.settingsUnavailable" = "设置窗口暂不可用。";
+
+"management.unreadBadge" = "未读提醒";
+"management.unreadBadgeAutomatic" = "自动";
+"management.unreadBadgeInclude" = "始终计入";
+"management.unreadBadgeExclude" = "从不计入";
+"management.unreadBadgeHelp" = "自动模式仅支持聊天 App，且只在 macOS 暴露准确数字标题时计入。";
+"statusItem.unreadFormat" = "Menu Hub，%d 条未读消息";
+"statusItem.unreadOverflow" = "Menu Hub，至少 99 条未读消息";
+"panel.retry" = "重试";

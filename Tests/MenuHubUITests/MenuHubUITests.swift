@@ -110,7 +110,52 @@ final class MenuHubUITests: XCTestCase {
         app.typeKey(.downArrow, modifierFlags: [])
         app.typeKey("k", modifierFlags: .command)
 
-        XCTAssertTrue(element(identifier: "hub.item.actions.lark").waitForExistence(timeout: 3))
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForExistence(timeout: 3))
+    }
+
+    func testUnreadFixtureKeepsPanelInteractionAvailable() {
+        launch(permission: "authorized", catalog: "mixed", language: "en", reset: true)
+
+        XCTAssertTrue(element(identifier: "hub.search").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Lark — 6"].exists)
+        app.typeKey(.downArrow, modifierFlags: [])
+        app.typeKey("k", modifierFlags: .command)
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForExistence(timeout: 3))
+    }
+
+    func testGlassActionPanelSupportsRenameAndLayeredEscapeInIconGrid() {
+        launch(permission: "authorized", catalog: "mixed", language: "en", layout: "grid", reset: true)
+        XCTAssertTrue(element(identifier: "hub.search").waitForExistence(timeout: 5))
+
+        app.typeKey(.downArrow, modifierFlags: [])
+        app.typeKey("k", modifierFlags: .command)
+
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["hub.item.actions.primary"].exists)
+        XCTAssertTrue(app.buttons["hub.item.actions.rename"].exists)
+        XCTAssertTrue(app.buttons["hub.item.actions.more"].exists)
+
+        app.buttons["hub.item.actions.rename"].click()
+        XCTAssertTrue(element(identifier: "hub.item.actions.aliasField").waitForExistence(timeout: 2))
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(app.buttons["hub.item.actions.primary"].waitForExistence(timeout: 2))
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForNonExistence(timeout: 2))
+    }
+
+    func testFailedGridActionExposesRetryAndOpenApp() {
+        launch(
+            permission: "authorized", catalog: "mixed", language: "en", layout: "grid",
+            actionFailure: "targetUnresponsive", reset: true
+        )
+        let item = element(identifier: "hub.item.lark")
+        XCTAssertTrue(item.waitForExistence(timeout: 5))
+        item.click()
+        XCTAssertTrue(app.staticTexts["Action Failed"].waitForExistence(timeout: 3))
+        app.typeKey("k", modifierFlags: .command)
+
+        XCTAssertTrue(app.buttons["Retry"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Open Host App"].exists)
     }
 
     private func launch(
@@ -119,6 +164,7 @@ final class MenuHubUITests: XCTestCase {
         language: String,
         appearance: String = "system",
         layout: String = "compact",
+        actionFailure: String? = nil,
         onboarding: Bool = false,
         suite: String = UUID().uuidString,
         reset: Bool = false
@@ -135,6 +181,9 @@ final class MenuHubUITests: XCTestCase {
             "-showOnboarding", onboarding ? "1" : "0",
             "-resetFixture", reset ? "1" : "0"
         ]
+        if let actionFailure {
+            app.launchArguments += ["-uiTestActionFailure", actionFailure]
+        }
         app.launch()
     }
 

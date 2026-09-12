@@ -69,6 +69,19 @@
 "panel.actionFailed" = "Action Failed";
 "panel.completed" = "Completed";
 
+"actionPanel.menuBarItem" = "Menu Bar Item";
+"actionPanel.ready" = "Ready";
+"actionPanel.quickActions" = "Quick Actions";
+"actionPanel.customize" = "Customize";
+"actionPanel.rename" = "Rename";
+"actionPanel.groups" = "Groups";
+"actionPanel.moreActions" = "More Actions";
+"actionPanel.displayName" = "Display Name";
+"actionPanel.optional" = "Optional";
+"actionPanel.keyboardDefault" = "↑↓ Select · ↩ Activate · Esc Close";
+"actionPanel.keyboardRename" = "Return Save · Esc Cancel";
+"actionPanel.keyboardGroups" = "Space Toggle · Esc Back";
+
 "capability.actionable" = "Actionable";
 "capability.openApp" = "Can Open App";
 "capability.unavailable" = "Unavailable";
@@ -238,3 +251,12 @@
 "error.unavailable" = "The item cannot be triggered safely right now.";
 "error.permissionResetUnavailable" = "Menu Hub's Accessibility record could not be reset. Try again later.";
 "error.settingsUnavailable" = "Settings are temporarily unavailable.";
+
+"management.unreadBadge" = "Unread Badge";
+"management.unreadBadgeAutomatic" = "Automatic";
+"management.unreadBadgeInclude" = "Always Include";
+"management.unreadBadgeExclude" = "Never Include";
+"management.unreadBadgeHelp" = "Automatic includes supported chat apps only when macOS exposes an exact numeric title.";
+"statusItem.unreadFormat" = "Menu Hub, %d unread messages";
+"statusItem.unreadOverflow" = "Menu Hub, 99 or more unread messages";
+"panel.retry" = "Retry";

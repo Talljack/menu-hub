@@ -59,6 +59,14 @@ Repair Permission resets only Menu Hub's own `com.local.MenuHub` Accessibility e
 - Right-click the icon to rescan, open Settings, restore the menu bar, or quit.
 - Favorites, Recent, Frequent, custom groups, aliases, ordering, and ignored items are managed under **Settings > Items & Groups**.
 
+### Unread message badge
+
+When Accessibility permission and automatic scanning are enabled, Menu Hub overlays a monochrome unread-total capsule inside its menu bar icon. The status item keeps a constant width so new messages do not push it into the notch or out of the visible area. It refreshes known numeric titles every second while the panel is open and every five seconds while closed.
+
+Automatic mode includes Feishu/Lark, WeChat, WeCom, QQ, DingTalk, Slack, Microsoft Teams, Telegram, WhatsApp, Discord, Signal, LINE, KakaoTalk, Viber, Zoom Workplace, Mattermost, Zulip, and Element. Menu Hub counts only an exact numeric title exposed by macOS; a dot or other presence-only indicator contributes zero. Open **Settings > Items & Groups**, select an item, and choose **Unread Badge > Automatic / Always Include / Never Include** to override it locally.
+
+The feature reads only the menu bar item's public Accessibility title. It does not read message content, notifications, accounts, or network traffic.
+
 ### Keyboard controls
 
 | Shortcut | Action |
@@ -94,6 +102,7 @@ macOS does not provide a public API that guarantees discovery, movement, hiding,
 - Items without stable Accessibility metadata or `AXPress` support may only open their host app or remain unavailable.
 - Long foreground-app menus, notched displays, and display changes can still make macOS clip items. Menu Hub restores a safe revealed state when the layout becomes uncertain.
 - Compatibility can vary with macOS, display arrangement, and third-party app versions.
+- macOS does not expose a public API that lets an app force its status item to an absolute leftmost coordinate. Menu Hub creates its primary item first and asks macOS to preserve its position; hold Command and drag it if you prefer another position.
 
 ## Build and test locally
 

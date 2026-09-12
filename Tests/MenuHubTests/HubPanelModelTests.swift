@@ -284,6 +284,88 @@ final class HubPanelModelTests: XCTestCase {
         XCTAssertTrue(scheduler.isCancelled)
     }
 
+    func testBackgroundMonitoringUsesFiveSecondKnownRefreshAndPublishesUnreadTotal() async {
+        let accessibility = ControlledAccessibility()
+        let scheduler = ManualPanelLiveUpdateScheduler()
+        let controller = CatalogController(
+            store: FakeCatalogStore(), accessibility: accessibility, launcher: FakeLauncher(),
+            hostMetadataResolver: FakeHostMetadataResolver(
+                name: "Feishu", bundleIdentifier: "com.larksuite.feishu"
+            )
+        )
+        let model = HubPanelModel(
+            controller: controller, initialPermissionState: .authorized, liveUpdateScheduler: scheduler
+        )
+        let initial = unreadSnapshot(title: "2")
+
+        model.startBackgroundUpdates()
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(0, with: .init(snapshots: [initial], errors: []))
+        let initialBadgePublished = await waitUntil { model.unreadBadgePresentation == .count(2) }
+        XCTAssertTrue(initialBadgePublished)
+        XCTAssertEqual(scheduler.intervals, [5])
+
+        await accessibility.setRefreshResult(.init(snapshots: [unreadSnapshot(title: "6")], errors: []))
+        let deadline = ContinuousClock.now + .seconds(1)
+        var refreshCount = await accessibility.refreshRequestCount
+        while refreshCount < 1, ContinuousClock.now < deadline {
+            scheduler.fire()
+            await Task.yield()
+            refreshCount = await accessibility.refreshRequestCount
+        }
+        XCTAssertEqual(refreshCount, 1)
+        let refreshedBadgePublished = await waitUntil { model.unreadBadgePresentation == .count(6) }
+        XCTAssertTrue(refreshedBadgePublished)
+        let scanCount = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCount, 1)
+    }
+
+    func testPanelVisibilityChangesMonitoringCadenceWithoutExtraDiscovery() async {
+        let accessibility = ControlledAccessibility()
+        let scheduler = ManualPanelLiveUpdateScheduler()
+        let controller = CatalogController(
+            store: FakeCatalogStore(), accessibility: accessibility, launcher: FakeLauncher()
+        )
+        let model = HubPanelModel(
+            controller: controller, initialPermissionState: .authorized, liveUpdateScheduler: scheduler
+        )
+
+        model.startBackgroundUpdates()
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(0, with: .init(snapshots: [], errors: []))
+        _ = await waitUntil { !controller.isScanning }
+        model.panelDidAppear()
+        model.panelDidDisappear()
+
+        XCTAssertEqual(scheduler.intervals, [5, 1, 5])
+        let scanCount = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCount, 1)
+    }
+
+    func testDisablingAutomaticScanningClearsUnreadBadgeAndStopsMonitoring() async {
+        let accessibility = ControlledAccessibility()
+        let scheduler = ManualPanelLiveUpdateScheduler()
+        let controller = CatalogController(
+            store: FakeCatalogStore(), accessibility: accessibility, launcher: FakeLauncher(),
+            hostMetadataResolver: FakeHostMetadataResolver(
+                name: "Feishu", bundleIdentifier: "com.larksuite.feishu"
+            )
+        )
+        let model = HubPanelModel(
+            controller: controller, initialPermissionState: .authorized, liveUpdateScheduler: scheduler
+        )
+
+        model.startBackgroundUpdates()
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(0, with: .init(snapshots: [unreadSnapshot(title: "4")], errors: []))
+        let badgePublished = await waitUntil { model.unreadBadgePresentation == .count(4) }
+        XCTAssertTrue(badgePublished)
+        await controller.updatePreferences { $0.automaticScanning = false }
+
+        XCTAssertEqual(model.unreadBadgePresentation, .hidden)
+        XCTAssertTrue(scheduler.isCancelled)
+    }
+
     func testAutomaticScanningPreferenceAppliesWhilePanelIsAlreadyOpen() async {
         var document = testDocument()
         document.preferences.automaticScanning = false
@@ -433,6 +515,33 @@ final class HubPanelModelTests: XCTestCase {
         XCTAssertEqual(model.statusMessageKey, .targetUnresponsive)
         model.invoke(model.items[0])
         XCTAssertNil(model.lastFailedItemID)
+    }
+
+    func testFailedInvocationFeedbackClearsAfterConfiguredDuration() async {
+        let accessibility = ControlledAccessibility(pressResult: .failure(.targetUnresponsive))
+        let controller = CatalogController(
+            store: FakeCatalogStore(loadResults: [testDocument()]), accessibility: accessibility,
+            launcher: FakeLauncher(), now: { testNow }
+        )
+        await controller.load()
+        let scan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(0, with: .init(snapshots: [testSnapshot()], errors: []))
+        await scan.value
+        let model = HubPanelModel(
+            controller: controller,
+            initialPermissionState: .authorized,
+            failureFeedbackDuration: .milliseconds(10)
+        )
+
+        model.invoke(model.items[0])
+        let failurePublished = await waitUntil { model.lastFailedItemID == "item" }
+        XCTAssertTrue(failurePublished)
+        try? await Task.sleep(for: .milliseconds(30))
+
+        XCTAssertNil(model.lastFailedItemID)
+        XCTAssertNil(model.statusMessageKey)
+        XCTAssertNil(controller.errors.actionFailure)
     }
 
     func testSuccessfulInvocationShowsRowFeedbackWhenClosePreferenceIsOff() async {
@@ -703,6 +812,24 @@ final class HubPanelModelTests: XCTestCase {
         ], groups: [group], preferences: .default)
     }
 
+    private func unreadSnapshot(title: String) -> AccessibilitySnapshot {
+        AccessibilitySnapshot(
+            processIdentifier: 88,
+            processName: "Lark Helper",
+            bundleIdentifier: "com.larksuite.feishu",
+            title: title,
+            role: "AXMenuBarItem",
+            subrole: nil,
+            identifier: "unread",
+            positionX: 10,
+            positionY: 0,
+            width: 28,
+            height: 20,
+            actions: ["AXPress"],
+            accessibilityPath: [1]
+        )
+    }
+
     private func waitUntil(_ condition: @MainActor () -> Bool) async -> Bool {
         let deadline = ContinuousClock.now + .seconds(1)
         while !condition(), ContinuousClock.now < deadline { await Task.yield() }
@@ -756,9 +883,10 @@ private final class ManualPanelLiveUpdateScheduler: PanelLiveUpdateScheduling, P
     private var action: (() -> Void)?
     private(set) var scheduledCount = 0
     private(set) var isCancelled = false
+    private(set) var intervals: [TimeInterval] = []
 
     func schedule(every interval: TimeInterval, action: @escaping @MainActor () -> Void) -> any PanelLiveUpdateCancellation {
-        XCTAssertEqual(interval, 1)
+        intervals.append(interval)
         scheduledCount += 1
         self.action = action
         isCancelled = false

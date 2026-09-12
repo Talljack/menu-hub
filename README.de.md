@@ -35,6 +35,8 @@ Ist der Schalter bereits aktiv, aber der Zugriff fehlt weiterhin, wähle **Berec
 
 ## Verwendung
 
+Bei erteilter Bedienungshilfen-Berechtigung legt Menu Hub eine einfarbige Gesamtsumme ungelesener Nachrichten in sein Symbol mit fester Breite. Es zählt nur exakte Zahlen, die macOS über die Bedienungshilfen bereitstellt; ein Punkt ohne Zahl zählt als null. Unter **Einstellungen > Elemente & Gruppen** kann jedes Element auf Automatisch, Immer einbeziehen oder Nie einbeziehen gesetzt werden.
+
 - Klicke auf das vierblättrige Symbol, um das Fenster zu öffnen oder zu schließen. Mit Option-Klick blendest du den verwalteten Bereich ein oder aus.
 - Drücke in jeder App `⌥M`. Der Kurzbefehl lässt sich unter **Einstellungen > Kurzbefehle** ändern.
 - Suche nach einer App oder einem Element und klicke auf ein Ergebnis, um dessen normale Aktion auszuführen.
