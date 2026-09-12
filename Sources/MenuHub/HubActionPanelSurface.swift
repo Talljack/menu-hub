@@ -68,11 +68,15 @@ struct HubActionPanelSurface: ViewModifier {
                 .background(.regularMaterial, in: shape)
                 .overlay(shape.stroke(.white.opacity(0.14), lineWidth: 0.75))
         case .liquidGlass:
+#if compiler(>=6.3)
             if #available(macOS 26.0, *) {
                 content.glassEffect(.regular, in: shape)
             } else {
                 content.background(.regularMaterial, in: shape)
             }
+#else
+            content.background(.regularMaterial, in: shape)
+#endif
         }
     }
 }
