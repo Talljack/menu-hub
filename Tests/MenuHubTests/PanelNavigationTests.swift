@@ -229,6 +229,32 @@ final class PanelNavigationTests: XCTestCase {
         XCTAssertFalse(state.showsMoreActions)
     }
 
+    func testActionPanelSurfaceUsesOpaqueFallbackWhenTransparencyIsReduced() {
+        XCTAssertEqual(
+            HubActionPanelSurfaceMode.resolve(reduceTransparency: true, supportsLiquidGlass: true),
+            .solid
+        )
+        XCTAssertEqual(
+            HubActionPanelSurfaceMode.resolve(reduceTransparency: false, supportsLiquidGlass: false),
+            .material
+        )
+        XCTAssertEqual(
+            HubActionPanelSurfaceMode.resolve(reduceTransparency: false, supportsLiquidGlass: true),
+            .liquidGlass
+        )
+    }
+
+    func testActionPanelCommandsReflectCapabilitiesAndExpansion() {
+        XCTAssertEqual(
+            HubItemActionPanelCommand.visible(canOpenHost: true, hasGroups: true, showsMore: false),
+            [.primary, .openHost, .favorite, .rename, .groups, .more]
+        )
+        XCTAssertEqual(
+            HubItemActionPanelCommand.visible(canOpenHost: false, hasGroups: false, showsMore: true),
+            [.primary, .favorite, .rename, .more, .retest, .management, .ignore]
+        )
+    }
+
     private func makeItem(host: String, item: String, alias: String? = nil) -> HubPanelItem {
         let record = MenuBarItemRecord(
             id: item, identity: .init(bundleIdentifier: "com.example", originalName: item, axIdentifier: item, path: [0]),
