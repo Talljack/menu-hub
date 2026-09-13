@@ -212,6 +212,7 @@ final class HubPanelModel: ObservableObject {
     private(set) var monitoringMode: PanelMonitoringMode = .stopped
     private var liveUpdatesActive: Bool { monitoringMode != .stopped }
     private var liveScanGeneration = 0
+    private var applicationSetGeneration = 0
     private var inFlightLiveScanTask: Task<Void, Never>?
     private var successFeedbackTask: Task<Void, Never>?
     private var failureFeedbackTask: Task<Void, Never>?
@@ -413,8 +414,7 @@ final class HubPanelModel: ObservableObject {
                   self.liveUpdatesActive, self.permissionGranted,
                   self.inFlightLiveScanTask == nil && !self.controller.isScanning else { return }
             if case .invoking = self.operationState { return }
-            let fullDiscovery = self.monitoringMode == .foreground
-                && (self.nextFullDiscoveryAt.map { self.now() >= $0 } ?? true)
+            let fullDiscovery = self.nextFullDiscoveryAt.map { self.now() >= $0 } ?? true
             self.startLiveScan(fullDiscovery: fullDiscovery)
         }
         scheduledLiveUpdateInterval = interval
@@ -425,6 +425,7 @@ final class HubPanelModel: ObservableObject {
         if fullDiscovery { nextFullDiscoveryAt = now().addingTimeInterval(20) }
         liveScanGeneration += 1
         let generation = liveScanGeneration
+        let observedApplicationSetGeneration = applicationSetGeneration
         inFlightLiveScanTask?.cancel()
         inFlightLiveScanTask = Task { [weak self] in
             guard let self else { return }
@@ -432,11 +433,16 @@ final class HubPanelModel: ObservableObject {
             else { await controller.refreshKnownItems() }
             guard liveUpdatesActive, generation == liveScanGeneration, !Task.isCancelled else { return }
             inFlightLiveScanTask = nil
+            if applicationSetGeneration != observedApplicationSetGeneration {
+                startLiveScan(fullDiscovery: true)
+            }
         }
     }
 
     func applicationSetDidChange() {
         controller.applicationSetDidChange()
+        applicationSetGeneration += 1
+        nextFullDiscoveryAt = nil
         guard liveUpdatesActive, permissionGranted,
               inFlightLiveScanTask == nil, !controller.isScanning else { return }
         startLiveScan(fullDiscovery: true)
