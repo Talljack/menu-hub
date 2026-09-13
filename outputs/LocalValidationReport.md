@@ -5,7 +5,7 @@
 
 ## 当前结论
 
-本地 0.1.5 修复候选已经完成 `arm64` / `x86_64` 独立 Release 构建与架构验证；本机 `arm64` 副本经 Developer ID 签名后替换安装并启动，位置为 `/Applications/Menu Hub.app`。当前 SwiftPM 门禁为 273 项 XCTest、0 失败；10 种语言资源完整性等另有 6 项 Swift Testing 测试通过。Xcode 单元/集成测试通过，已签名 macOS UI 套件 13/13 通过。
+本地 0.1.5 修复候选已经完成 `arm64` / `x86_64` 独立 Release 构建与架构验证；本机 `arm64` 副本经 Developer ID 签名后替换安装并启动，位置为 `/Applications/Menu Hub.app`。当前 SwiftPM 门禁为 274 项 XCTest、0 失败；10 种语言资源完整性等另有 6 项 Swift Testing 测试通过。Xcode 单元/集成测试通过，已签名 macOS UI 套件 13/13 通过。
 
 用户报告的问题已有对应实测证据：面板使用固定头尾和独立单滚动区，并为系统滚动条保留右侧空间；飞书动态标题会随扫描更新，最终行标题由“宿主 App — 状态项”组成。当前 Mac 的主语言为 English，因此显示系统本地化名称 `Feishu`；所有项目都保留宿主名称，不再只显示数字。面板现只显示当前正在运行的用户 App，并在无权限降级时按宿主 App 去重；Control Center、Battery、Bluetooth、Clock、Focus、Passwords、Spotlight、SystemUIServer 与输入法代理均被排除。
 
@@ -35,7 +35,7 @@
 
 | 门禁 | 最终结果 | 证据或边界 |
 |---|---|---|
-| `swift test` | PASS | 2026-09-13，273 项、0 失败；另有 6 项 Swift Testing 测试通过 |
+| `swift test` | PASS | 2026-09-13，274 项、0 失败；另有 6 项 Swift Testing 测试通过 |
 | Xcode UI tests | PASS | Apple Development 签名 runner 在本机执行 13 个场景，13/13 通过；当前中文输入法会在测试中临时切换 ASCII 输入源并立即恢复 |
 | Release search performance | PASS | 100 项搜索回归测试已通过，早前 Release 实测约 0.675 ms/次，目标 < 16 ms |
 | Clean Release build | PASS | `arm64` 与 `x86_64` 独立 Release 构建均成功，最低部署目标 macOS 14 |

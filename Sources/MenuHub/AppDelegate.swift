@@ -430,8 +430,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func registerPersistedHotKeyWhenLoaded() {
-        panelModel.$operationState
-            .filter { $0 != .loading }
+        panelModel.$hasFinishedInitialLoad
+            .filter { $0 }
             .prefix(1)
             .sink { [weak self] _ in
                 guard let self else { return }

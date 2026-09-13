@@ -87,6 +87,41 @@ final class HubPanelModelTests: XCTestCase {
         model.stopLiveUpdates()
     }
 
+    func testManualRefreshCannotRaceInitialCatalogLoad() async {
+        let store = FakeCatalogStore(controlLoads: true)
+        let accessibility = ControlledAccessibility()
+        let controller = CatalogController(
+            store: store,
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        let model = HubPanelModel(
+            controller: controller,
+            initialPermissionState: .authorized,
+            loadsController: true
+        )
+
+        await store.waitForLoadRequests(1)
+        model.refresh()
+        await Task.yield()
+
+        let scanCountWhileLoading = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCountWhileLoading, 0)
+        XCTAssertFalse(model.hasFinishedInitialLoad)
+
+        var document = testDocument()
+        document.items[0].isFavorite = true
+        await store.completeLoad(0, with: document)
+        let loaded = await waitUntil { model.hasFinishedInitialLoad }
+
+        XCTAssertTrue(loaded)
+        XCTAssertEqual(controller.document.items.map(\.id), ["item"])
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        let scanCountAfterLoad = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCountAfterLoad, 0)
+    }
+
     func testMonitoringCadenceKeepsForegroundFreshAndBacksOffWithoutUnreadItems() {
         XCTAssertEqual(PanelMonitoringMode.foreground.interval(hasUnreadBadge: false), 1)
         XCTAssertEqual(PanelMonitoringMode.background.interval(hasUnreadBadge: true), 5)

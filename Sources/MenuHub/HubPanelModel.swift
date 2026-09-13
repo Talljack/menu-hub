@@ -163,6 +163,7 @@ final class HubPanelModel: ObservableObject {
     @Published var selectionID: String?
     @Published private(set) var permissionState: PermissionState
     @Published private(set) var operationState: PanelOperationState = .idle
+    @Published private(set) var hasFinishedInitialLoad = true
     @Published private(set) var statusMessageKey: PanelStatusMessageKey?
     @Published var hotKeyAvailable = true
     @Published private(set) var snapshot: PanelSnapshot = .empty
@@ -243,11 +244,13 @@ final class HubPanelModel: ObservableObject {
         runningUserApplicationBundleIdentifiers = { HostApplicationResolver.runningUserApplicationBundleIdentifiers() }
         failureFeedbackDuration = .seconds(30)
         permissionState = AccessibilityClient.isTrusted() ? .authorized : .unknown
+        hasFinishedInitialLoad = false
         observeController()
         operationState = .loading
         Task { [weak self] in
             await self?.controller.load()
             guard let self else { return }
+            hasFinishedInitialLoad = true
             if operationState == .loading { operationState = .idle }
             rebuildSnapshot()
             if liveUpdatesActive, controller.document.preferences.automaticScanning, permissionGranted,
@@ -277,12 +280,14 @@ final class HubPanelModel: ObservableObject {
         self.accessibilityTrustProvider = accessibilityTrustProvider
         self.runningUserApplicationBundleIdentifiers = runningUserApplicationBundleIdentifiers
         self.failureFeedbackDuration = failureFeedbackDuration
+        self.hasFinishedInitialLoad = !loadsController
         observeController()
         if loadsController {
             operationState = .loading
             Task { [weak self] in
                 await self?.controller.load()
                 guard let self else { return }
+                hasFinishedInitialLoad = true
                 if operationState == .loading { operationState = .idle }
                 rebuildSnapshot()
                 if liveUpdatesActive, controller.document.preferences.automaticScanning, permissionGranted,
@@ -438,7 +443,7 @@ final class HubPanelModel: ObservableObject {
     }
 
     private func startScan() {
-        guard revalidateAccessibilityTrust() else { return }
+        guard hasFinishedInitialLoad, revalidateAccessibilityTrust() else { return }
         manualScanGeneration += 1
         let generation = manualScanGeneration
         manualScanTask?.cancel()
