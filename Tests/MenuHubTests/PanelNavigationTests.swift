@@ -5,6 +5,60 @@ import XCTest
 
 @MainActor
 final class PanelNavigationTests: XCTestCase {
+    func testSpacerWidthUsesTheStatusItemsDisplayBeforeTheMainDisplay() {
+        XCTAssertEqual(
+            MenuBarScreenGeometry.maximumSafeSpacerWidth(
+                statusItemVisibleWidth: 900,
+                fallbackVisibleWidth: 2_000
+            ),
+            405
+        )
+        XCTAssertEqual(
+            MenuBarScreenGeometry.maximumSafeSpacerWidth(
+                statusItemVisibleWidth: nil,
+                fallbackVisibleWidth: 2_000
+            ),
+            600
+        )
+        XCTAssertEqual(
+            MenuBarScreenGeometry.maximumSafeSpacerWidth(
+                statusItemVisibleWidth: nil,
+                fallbackVisibleWidth: nil
+            ),
+            320
+        )
+    }
+
+    func testInstallationHealthRequiresApplicationsLocationAndStableSigningIdentity() {
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD"
+            ).status,
+            .ready
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Users/me/Downloads/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD"
+            ).status,
+            .moveToApplications
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: nil
+            ).status,
+            .unsigned
+        )
+    }
+
     func testFailedActionUsesRetryLabelWithoutRemovingOpenHostAction() {
         XCTAssertEqual(HubItemActionLabel.primary(hasFailure: true, isLaunchOnly: false), L("panel.retry"))
         XCTAssertEqual(HubItemActionLabel.primary(hasFailure: false, isLaunchOnly: true), L("panel.openApp"))

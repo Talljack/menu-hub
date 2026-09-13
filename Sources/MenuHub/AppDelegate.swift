@@ -233,6 +233,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func handleSafetyEvent() {
         revealItems(immediate: true)
+        state.updateMaximumSafeWidth(maximumSafeSpacerWidth())
         panelModel.applicationSetDidChange()
     }
 
@@ -516,8 +517,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func maximumSafeSpacerWidth() -> Double {
-        guard let screen = NSScreen.main else { return 320 }
-        return max(80, min(600, screen.visibleFrame.width * 0.45))
+        MenuBarScreenGeometry.maximumSafeSpacerWidth(
+            statusItemVisibleWidth: (hubItem.button?.window?.screen?.visibleFrame.width).map(Double.init),
+            fallbackVisibleWidth: (NSScreen.main?.visibleFrame.width).map(Double.init)
+        )
     }
 
     @objc private func presentOnboarding() {

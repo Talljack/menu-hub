@@ -20,10 +20,10 @@ private final class TaskPanelLiveUpdateCancellation: PanelLiveUpdateCancellation
 @MainActor
 private struct SystemPanelLiveUpdateScheduler: PanelLiveUpdateScheduling {
     func schedule(every interval: TimeInterval, action: @escaping @MainActor () -> Void) -> any PanelLiveUpdateCancellation {
-        let nanoseconds = UInt64(max(interval, 0.1) * 1_000_000_000)
+        let delay = Duration.milliseconds(Int64(max(interval, 0.1) * 1_000))
         let task = Task { @MainActor in
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: nanoseconds)
+                try? await Task.sleep(for: delay)
                 guard !Task.isCancelled else { break }
                 action()
             }
@@ -99,10 +99,10 @@ enum PanelMonitoringMode: Equatable {
     case background
     case foreground
 
-    var interval: TimeInterval? {
+    func interval(hasUnreadBadge: Bool) -> TimeInterval? {
         switch self {
         case .stopped: nil
-        case .background: 5
+        case .background: hasUnreadBadge ? 5 : 20
         case .foreground: 1
         }
     }
@@ -207,6 +207,7 @@ final class HubPanelModel: ObservableObject {
     private var invocationGeneration = 0
     private var invocationTask: Task<Void, Never>?
     private var liveUpdateCancellation: (any PanelLiveUpdateCancellation)?
+    private var scheduledLiveUpdateInterval: TimeInterval?
     private(set) var monitoringMode: PanelMonitoringMode = .stopped
     private var liveUpdatesActive: Bool { monitoringMode != .stopped }
     private var liveScanGeneration = 0
@@ -240,7 +241,7 @@ final class HubPanelModel: ObservableObject {
         liveUpdateScheduler = SystemPanelLiveUpdateScheduler()
         accessibilityTrustProvider = { AccessibilityClient.isTrusted() }
         runningUserApplicationBundleIdentifiers = { HostApplicationResolver.runningUserApplicationBundleIdentifiers() }
-        failureFeedbackDuration = .seconds(3)
+        failureFeedbackDuration = .seconds(30)
         permissionState = AccessibilityClient.isTrusted() ? .authorized : .unknown
         observeController()
         operationState = .loading
@@ -287,8 +288,9 @@ final class HubPanelModel: ObservableObject {
 
     var recentItems: [HubPanelItem] {
         let recent = Set(snapshot.recent.map(\.id))
+        let rank = Dictionary(uniqueKeysWithValues: recentIDs.enumerated().map { ($0.element, $0.offset) })
         return items.filter { recent.contains($0.id) }.sorted {
-            (recentIDs.firstIndex(of: $0.id) ?? .max) < (recentIDs.firstIndex(of: $1.id) ?? .max)
+            (rank[$0.id] ?? .max) < (rank[$1.id] ?? .max)
         }
     }
 
@@ -312,6 +314,7 @@ final class HubPanelModel: ObservableObject {
         monitoringMode = .stopped
         liveUpdateCancellation?.cancel()
         liveUpdateCancellation = nil
+        scheduledLiveUpdateInterval = nil
         liveScanGeneration += 1
         inFlightLiveScanTask?.cancel()
         inFlightLiveScanTask = nil
@@ -365,6 +368,7 @@ final class HubPanelModel: ObservableObject {
         guard mode != monitoringMode else { return }
         liveUpdateCancellation?.cancel()
         liveUpdateCancellation = nil
+        scheduledLiveUpdateInterval = nil
         monitoringMode = mode
         if mode == .stopped {
             unreadBadgePresentation = .hidden
@@ -374,9 +378,13 @@ final class HubPanelModel: ObservableObject {
     }
 
     private func scheduleLiveUpdatesIfNeeded() {
-        guard liveUpdatesActive, permissionGranted, liveUpdateCancellation == nil,
+        guard liveUpdatesActive, permissionGranted,
               lastAutomaticScanningPreference ?? controller.document.preferences.automaticScanning,
-              let interval = monitoringMode.interval else { return }
+              let interval = monitoringMode.interval(hasUnreadBadge: unreadBadgePresentation != .hidden) else { return }
+        if liveUpdateCancellation != nil, scheduledLiveUpdateInterval == interval { return }
+        liveUpdateCancellation?.cancel()
+        liveUpdateCancellation = nil
+        scheduledLiveUpdateInterval = nil
         liveUpdateCancellation = liveUpdateScheduler.schedule(every: interval) { [weak self] in
             guard let self, self.liveUpdatesActive, self.permissionGranted,
                   self.inFlightLiveScanTask == nil && !self.controller.isScanning else { return }
@@ -385,6 +393,7 @@ final class HubPanelModel: ObservableObject {
                 && (self.nextFullDiscoveryAt.map { self.now() >= $0 } ?? true)
             self.startLiveScan(fullDiscovery: fullDiscovery)
         }
+        scheduledLiveUpdateInterval = interval
     }
 
     private func startLiveScan(fullDiscovery: Bool) {
@@ -552,7 +561,7 @@ final class HubPanelModel: ObservableObject {
         lastSucceededItemID = itemID
         successFeedbackTask?.cancel()
         successFeedbackTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 900_000_000)
+            try? await Task.sleep(for: .milliseconds(900))
             guard !Task.isCancelled, self?.lastSucceededItemID == itemID else { return }
             self?.lastSucceededItemID = nil
         }
@@ -561,6 +570,10 @@ final class HubPanelModel: ObservableObject {
     private func publishFailure(_ message: PanelStatusMessageKey, itemID: String, generation: Int) {
         statusMessageKey = message
         lastFailedItemID = itemID
+        actionMenuPresentationID = HubPanelPresentationContext.canonicalPresentationID(
+            itemID: itemID,
+            query: query
+        )
         failureFeedbackTask?.cancel()
         let duration = failureFeedbackDuration
         failureFeedbackTask = Task { [weak self] in
@@ -632,6 +645,7 @@ final class HubPanelModel: ObservableObject {
     private func cancelAllAccessibilityWork() {
         liveUpdateCancellation?.cancel()
         liveUpdateCancellation = nil
+        scheduledLiveUpdateInterval = nil
         liveScanGeneration += 1
         inFlightLiveScanTask?.cancel()
         inFlightLiveScanTask = nil
@@ -729,6 +743,7 @@ final class HubPanelModel: ObservableObject {
             unreadBadgePresentation = .hidden
             liveUpdateCancellation?.cancel()
             liveUpdateCancellation = nil
+            scheduledLiveUpdateInterval = nil
             liveScanGeneration += 1
             inFlightLiveScanTask?.cancel()
             inFlightLiveScanTask = nil
@@ -747,10 +762,12 @@ final class HubPanelModel: ObservableObject {
             unreadBadgePresentation = .hidden
             return
         }
+        let previous = unreadBadgePresentation
         unreadBadgePresentation = UnreadBadgeAggregator.presentation(
             records: document.items,
             snapshots: runtimeSnapshots ?? controller.runtimeSnapshots
         )
+        if unreadBadgePresentation != previous { scheduleLiveUpdatesIfNeeded() }
     }
 
     private func rebuildSnapshot() {

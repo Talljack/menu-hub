@@ -1,0 +1,68 @@
+import Foundation
+import Security
+
+struct InstallationHealth: Equatable {
+    enum Status: Equatable {
+        case ready
+        case moveToApplications
+        case unsigned
+    }
+
+    let bundleURL: URL
+    let bundleIdentifier: String
+    let version: String
+    let signingTeamIdentifier: String?
+    let status: Status
+
+    static var current: Self {
+        let bundle = Bundle.main
+        let bundleURL = bundle.bundleURL
+        return evaluate(
+            bundleURL: bundleURL,
+            bundleIdentifier: bundle.bundleIdentifier ?? "com.local.MenuHub",
+            version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? L("settings.developmentBuild"),
+            signingTeamIdentifier: signingTeamIdentifier(for: bundleURL)
+        )
+    }
+
+    static func evaluate(
+        bundleURL: URL,
+        bundleIdentifier: String,
+        version: String,
+        signingTeamIdentifier: String?
+    ) -> Self {
+        let standardizedPath = bundleURL.standardizedFileURL.path
+        let isInApplications = standardizedPath == "/Applications/Menu Hub.app"
+            || standardizedPath.hasPrefix("/Applications/Menu Hub.app/")
+        let normalizedTeam = signingTeamIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let status: Status
+        if normalizedTeam?.isEmpty != false {
+            status = .unsigned
+        } else if !isInApplications {
+            status = .moveToApplications
+        } else {
+            status = .ready
+        }
+        return Self(
+            bundleURL: bundleURL,
+            bundleIdentifier: bundleIdentifier,
+            version: version,
+            signingTeamIdentifier: normalizedTeam,
+            status: status
+        )
+    }
+
+    private static func signingTeamIdentifier(for bundleURL: URL) -> String? {
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(bundleURL as CFURL, [], &staticCode) == errSecSuccess,
+              let staticCode else { return nil }
+        var information: CFDictionary?
+        guard SecCodeCopySigningInformation(
+            staticCode,
+            SecCSFlags(rawValue: kSecCSSigningInformation),
+            &information
+        ) == errSecSuccess,
+        let values = information as? [CFString: Any] else { return nil }
+        return values[kSecCodeInfoTeamIdentifier] as? String
+    }
+}

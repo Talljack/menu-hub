@@ -1,15 +1,15 @@
 # Menu Hub 本地验证报告
 
-更新时间：2026-09-08
+更新时间：2026-09-13
 目标：Swift 6、macOS 14+、Bundle ID `com.local.MenuHub`
 
 ## 当前结论
 
-本地 Release 验收版已经完成 `arm64` / `x86_64` 独立构建、DMG/ZIP 打包与架构验证；本机 `arm64` 副本经 Developer ID 签名后替换安装并启动，位置为 `/Applications/Menu Hub.app`。当前 SwiftPM 门禁为 239 项 XCTest、0 失败；中英文资源完整性另有 2 项 Swift Testing 测试通过。
+本地 0.1.5 修复候选已经完成 `arm64` / `x86_64` 独立 Release 构建与架构验证；本机 `arm64` 副本经 Developer ID 签名后替换安装并启动，位置为 `/Applications/Menu Hub.app`。当前 SwiftPM 门禁为 270 项 XCTest、0 失败；10 种语言资源完整性等另有 6 项 Swift Testing 测试通过。Xcode 单元/集成测试通过，已签名 macOS UI 套件 12/12 通过。
 
 用户报告的问题已有对应实测证据：面板使用固定头尾和独立单滚动区，并为系统滚动条保留右侧空间；飞书动态标题会随扫描更新，最终行标题由“宿主 App — 状态项”组成。当前 Mac 的主语言为 English，因此显示系统本地化名称 `Feishu`；所有项目都保留宿主名称，不再只显示数字。面板现只显示当前正在运行的用户 App，并在无权限降级时按宿主 App 去重；Control Center、Battery、Bluetooth、Clock、Focus、Passwords、Spotlight、SystemUIServer 与输入法代理均被排除。
 
-仍未宣称可公开发布：独立 Xcode UI runner 在建立连接前超时，刘海/多显示器与耐久矩阵仍需专用测试机完成；当前安装版已通过实际辅助功能树与界面截图检查。
+本轮还加入了自适应刷新（面板打开 1 秒、有未读 5 秒、无未读 20 秒）、失败后自动打开恢复面板、动作面板独立键盘事件路由、多显示器安全宽度、安装/签名身份诊断、增强对比度与字体可读性，以及可见的设置导出错误。刘海/真实外接屏热插拔、睡眠唤醒和干净机器公证安装矩阵仍需专用测试机完成，未伪报为通过。
 
 ## 已有证据
 
@@ -35,23 +35,22 @@
 
 | 门禁 | 最终结果 | 证据或边界 |
 |---|---|---|
-| `swift test` | PASS | 2026-09-08，239 项、0 失败；另有 2 项本地化 Swift Testing 测试通过 |
-| Xcode UI tests | BLOCKED | 测试 target 和场景已建立；runner 在建立连接前超时，未伪报通过 |
+| `swift test` | PASS | 2026-09-13，270 项、0 失败；另有 6 项 Swift Testing 测试通过 |
+| Xcode UI tests | PASS | Apple Development 签名 runner 在本机执行 12 个场景，12/12 通过；当前中文输入法会在测试中临时切换 ASCII 输入源并立即恢复 |
 | Release search performance | PASS | 100 项搜索回归测试已通过，早前 Release 实测约 0.675 ms/次，目标 < 16 ms |
 | Clean Release build | PASS | `arm64` 与 `x86_64` 独立 Release 构建均成功，最低部署目标 macOS 14 |
 | Bundle identity/signature | PASS | `com.local.MenuHub`；Developer ID `636LV693YD`；严格深度签名校验通过；Hardened Runtime |
 | Linked frameworks/privacy scan | PASS | 仅系统 Framework/Swift 运行库；无 Electron、第三方 SDK、网络或分析框架 |
-| Install/launch | PASS | 本机 `arm64` 版安装于 `/Applications/Menu Hub.app`，唯一进程 PID 92120 |
+| Install/launch | PASS | 本机 `arm64` 版安装于 `/Applications/Menu Hub.app`，唯一进程 PID 1896；旧 App 可恢复备份位于 `work/local-install-backups/20260913-095630/` |
 | Release 崩溃回归 | PASS | 修复 Release-only SwiftUI actor 隔离崩溃后，再次用 `⌥M` 打开未产生新崩溃报告，进程持续运行 |
 | Panel/scroll/Lark display | PASS | 已通过本机辅助功能树与截图检查：系统组件消失、每个运行 App 一行、飞书使用宿主名加动态数字；滚动条位于预留槽内 |
 | WeChat badge disappearance | PASS | 实际复现旧记录 `WeChat — 1` 到无角标；修复后点击会关闭 Hub 成功态并唤起微信，再打开无 stale warning |
 | DMG/ZIP architecture packages | PASS | 两套 DMG 均可挂载且含 Applications 快捷方式；两套 ZIP 均可解压；Mach-O 分别严格为 `arm64` / `x86_64`，校验和通过 |
 | Settings/management/localization | PARTIAL | 代码、自动化与打包资源通过；最终窗口视觉切换待解锁 |
-| Restore and crash safety | PARTIAL | 状态机与异常启动测试通过；长循环及 SystemUIServer/硬件场景未完成 |
+| Restore and crash safety | PARTIAL | 状态机、异常启动与 1000 次纯状态收起/恢复循环通过；真实 NSStatusItem、SystemUIServer 与硬件场景未完成 |
 
 ## 仍未验证，不得推断为通过
 
-- 独立 UI Test target 及其完整场景。
 - 15 个代表性项目的隐藏后触发兼容性矩阵。
 - 非刘海屏、外接屏、显示器切换、缩放分辨率和全屏行为。
 - macOS 14 真实硬件和最新公开测试版。

@@ -4,6 +4,13 @@ import XCTest
 
 @MainActor
 final class HubPanelModelTests: XCTestCase {
+    func testMonitoringCadenceKeepsForegroundFreshAndBacksOffWithoutUnreadItems() {
+        XCTAssertEqual(PanelMonitoringMode.foreground.interval(hasUnreadBadge: false), 1)
+        XCTAssertEqual(PanelMonitoringMode.background.interval(hasUnreadBadge: true), 5)
+        XCTAssertEqual(PanelMonitoringMode.background.interval(hasUnreadBadge: false), 20)
+        XCTAssertNil(PanelMonitoringMode.stopped.interval(hasUnreadBadge: true))
+    }
+
     func testPanelSnapshotProjectsEverySectionAndSearch() async {
         let group = GroupRecord(name: "Work")
         let document = panelDocument(group: group)
@@ -303,7 +310,7 @@ final class HubPanelModelTests: XCTestCase {
         await accessibility.completeScan(0, with: .init(snapshots: [initial], errors: []))
         let initialBadgePublished = await waitUntil { model.unreadBadgePresentation == .count(2) }
         XCTAssertTrue(initialBadgePublished)
-        XCTAssertEqual(scheduler.intervals, [5])
+        XCTAssertEqual(scheduler.intervals, [20, 5])
 
         await accessibility.setRefreshResult(.init(snapshots: [unreadSnapshot(title: "6")], errors: []))
         let deadline = ContinuousClock.now + .seconds(1)
@@ -337,7 +344,7 @@ final class HubPanelModelTests: XCTestCase {
         model.panelDidAppear()
         model.panelDidDisappear()
 
-        XCTAssertEqual(scheduler.intervals, [5, 1, 5])
+        XCTAssertEqual(scheduler.intervals, [20, 1, 20])
         let scanCount = await accessibility.scanRequestCount
         XCTAssertEqual(scanCount, 1)
     }
@@ -513,6 +520,7 @@ final class HubPanelModelTests: XCTestCase {
 
         XCTAssertTrue(failed)
         XCTAssertEqual(model.statusMessageKey, .targetUnresponsive)
+        XCTAssertEqual(model.actionMenuPresentationID, .canonical(itemID: "item"))
         model.invoke(model.items[0])
         XCTAssertNil(model.lastFailedItemID)
     }

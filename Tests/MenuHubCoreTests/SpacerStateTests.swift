@@ -44,6 +44,21 @@ final class SpacerStateTests: XCTestCase {
         XCTAssertEqual(state.currentWidth, 1)
     }
 
+    func testDisplayChangeUpdatesTheClampUsedByTheNextHide() {
+        var state = SpacerState.startup(
+            safeWidth: 1,
+            requestedHiddenWidth: 500,
+            shouldRestoreHiddenPreference: false,
+            maximumSafeWidth: 600
+        )
+
+        state.updateMaximumSafeWidth(220)
+        state.hideItems()
+
+        XCTAssertEqual(state.maximumSafeWidth, 220)
+        XCTAssertEqual(state.currentWidth, 220)
+    }
+
     func testSetupMarkerGetsADraggableVisibleWidth() {
         let state = SpacerState.startup(
             safeWidth: 1,
@@ -67,5 +82,23 @@ final class SpacerStateTests: XCTestCase {
         XCTAssertEqual(state.visibility, .revealed)
         XCTAssertEqual(state.currentWidth, 1)
         XCTAssertFalse(state.shouldRestoreHiddenPreference)
+    }
+
+    func testOneThousandHideRevealCyclesAlwaysReturnToTheSafeWidth() {
+        var state = SpacerState.startup(
+            safeWidth: 1,
+            requestedHiddenWidth: 500,
+            shouldRestoreHiddenPreference: false,
+            maximumSafeWidth: 320
+        )
+
+        for cycle in 0..<1_000 {
+            state.updateMaximumSafeWidth(cycle.isMultiple(of: 2) ? 220 : 480)
+            state.hideItems()
+            XCTAssertLessThanOrEqual(state.currentWidth, state.maximumSafeWidth)
+            state.revealForSafety()
+            XCTAssertEqual(state.visibility, .revealed)
+            XCTAssertEqual(state.currentWidth, 1)
+        }
     }
 }

@@ -50,7 +50,6 @@ struct HubPanelView: View {
             Divider()
             contentScroller
             if let message = model.statusMessage,
-               !model.items.isEmpty,
                model.statusMessageKey != .permissionDenied {
                 Divider()
                 statusBar(message)
@@ -269,7 +268,7 @@ struct HubPanelView: View {
         VStack(alignment: .leading, spacing: 6) {
             Label(L("panel.permissionTitle"), systemImage: "hand.raised.fill").font(.headline)
             Text(L("panel.permissionBody"))
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
             HStack {
                 Button(permissionButtonTitle) { handlePermissionPrimaryAction() }
                     .buttonStyle(.borderedProminent).disabled(permissionButtonDisabled)
@@ -304,14 +303,22 @@ struct HubPanelView: View {
             Button { model.openSettings() } label: { Label(L("panel.settings"), systemImage: "gearshape") }
                 .buttonStyle(.borderless).help(L("panel.settingsHelp")).accessibilityLabel(L("panel.settingsHelp"))
             Spacer()
-            if model.lastRefreshAt != nil, !model.isScanning {
-                Image(systemName: "checkmark.circle.fill")
+            if let lastRefreshAt = model.lastRefreshAt, !model.isScanning {
+                Label {
+                    Text(lastRefreshAt, style: .relative)
+                } icon: {
+                    Image(systemName: "checkmark.circle.fill")
+                }
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .help(L("panel.updatedNow"))
                     .accessibilityLabel(L("panel.updatedNow"))
             }
             if model.hotKeyAvailable {
-                Text("⌥M")
+                Text(ShortcutRecorderPolicy.label(
+                    keyCode: model.catalogController.document.preferences.hotKey.keyCode,
+                    modifiers: model.catalogController.document.preferences.hotKey.modifiers
+                ))
                     .font(.caption.monospaced())
                     .foregroundStyle(.tertiary)
                     .help(L("panel.footerHotKey"))
@@ -367,6 +374,9 @@ struct HubPanelView: View {
     }
 
     private func handleKeyEvent(_ event: NSEvent) -> Bool {
+        // Let the nested action popover own Return, arrows, and layered Escape.
+        // Handling these in the parent would close or move the main panel instead.
+        guard model.actionMenuPresentationID == nil else { return false }
         let router = PanelKeyboardRouter()
         guard let command = router.command(for: event) else { return false }
         switch router.action(for: command, hasSearchText: !model.query.isEmpty) {

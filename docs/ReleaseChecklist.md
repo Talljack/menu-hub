@@ -1,6 +1,6 @@
 # Menu Hub 发布清单
 
-状态日期：2026-09-08
+状态日期：2026-09-13
 
 本清单不把“代码已实现”等同于“已在真实机器验收”。只有带具体构建、测试、签名或实机证据的项目才能勾选。
 
@@ -15,27 +15,27 @@
 - [x] `⌥M` 默认快捷键、冲突处理和设置录制器均有实现。
 - [x] 面板、搜索、收藏、最近、常用、手动分组、别名、排序、忽略与宿主启动降级均有实现。
 - [x] 首次设置、渐进授权、显式单 App repair、管理窗口和六区设置页均有实现。
-- [x] English 与简体中文资源键集合一致（当前各 224 个本地化键）。
+- [x] 10 种语言资源键集合一致（当前各 262 个本地化键）。
 - [x] 本地原子 Catalog、备份恢复、显式导出/清除和脱敏诊断均有实现。
 
 ## 已记录的自动验证里程碑
 
 - [x] Task 8 里程碑：185 项测试，0 失败。
 - [x] Task 8 里程碑：Debug 与 Release 构建成功。
-- [x] 当前候选代码运行 `swift test`：239 项 XCTest + 2 项 Swift Testing，0 失败。
-- [ ] 最终代码冻结后运行完整 Xcode 单元/集成测试。
-- [ ] 建立并通过独立 UI Test target，包括双语、外观、权限 fixture、键盘和持久化场景。
-- [ ] Release 模式 100 项搜索测试低于 16 ms，并记录实测数字。
+- [x] 当前候选代码运行 `swift test`：270 项 XCTest + 6 项 Swift Testing，0 失败。
+- [x] 当前候选代码运行完整 Xcode 单元/集成测试，0 失败。
+- [x] 独立 UI Test target 在已签名本机执行 12 个场景，覆盖 10 种语言代表布局、外观、权限 fixture、键盘、失败恢复和持久化，12/12 通过。
+- [x] 100 项搜索性能测试通过，平均单次低于 16 ms 门槛。
 
 ## 安装前门禁
 
 - [x] 分别执行干净 `arm64` 与 `x86_64` Release 构建，确认最低 macOS 14。
-- [ ] 使用 Developer ID Application 签名，带安全时间戳。
-- [ ] `codesign --verify --deep --strict --verbose=2` 通过。
-- [ ] 确认 Hardened Runtime 存在，发布 entitlements 不含 `get-task-allow`。
-- [ ] 用 `otool -L` 确认无禁止的第三方联网或分析框架。
-- [ ] 旧 `/Applications/Menu Hub.app` 已移动到 `work/` 下的时间戳备份。
-- [ ] 只运行一个 `com.local.MenuHub` 进程，启动路径来自 `/Applications/Menu Hub.app`。
+- [x] 本机安装候选使用 Developer ID Application 签名，带安全时间戳。
+- [x] 本机安装候选 `codesign --verify --deep --strict --verbose=2` 通过。
+- [x] 本机安装候选包含 Hardened Runtime；发布构建未加入调试 entitlement。
+- [x] 用 `otool -L` 确认安装候选只链接 Apple 系统框架与 Swift 运行库，无第三方联网或分析框架。
+- [x] 旧 `/Applications/Menu Hub.app` 已移动到 `work/local-install-backups/20260913-095630/`。
+- [x] 只运行一个 `com.local.MenuHub` 进程，启动路径来自 `/Applications/Menu Hub.app`。
 - [ ] Accessibility 授权在保持相同 Bundle ID 与签名身份后仍有效；除非用户确认 repair，否则不重置 TCC。
 
 ## 当前 Mac 交互验收

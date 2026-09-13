@@ -92,6 +92,9 @@ struct SettingsView: View {
     @StateObject private var loginModel = LaunchAtLoginModel()
     @State private var selection: SettingsSection? = .general
     @State private var hotKeyConflict = false
+    @State private var installationHealth = InstallationHealth.current
+    @State private var exportErrorMessage = ""
+    @State private var showsExportError = false
 
     init(environment: SettingsEnvironment) {
         self.environment = environment
@@ -111,7 +114,15 @@ struct SettingsView: View {
                 .navigationTitle((selection ?? .general).title)
         }
         .frame(minWidth: 680, minHeight: 480)
-        .onAppear { loginModel.refresh() }
+        .onAppear {
+            loginModel.refresh()
+            installationHealth = .current
+        }
+        .alert(L("settings.exportFailedTitle"), isPresented: $showsExportError) {
+            Button(L("common.done"), role: .cancel) {}
+        } message: {
+            Text(exportErrorMessage)
+        }
     }
 
     @ViewBuilder
@@ -227,6 +238,26 @@ struct SettingsView: View {
                 Button(L("settings.openSystemSettings")) { panelModel.openAccessibilitySettings() }
                 Text(L("settings.permissionExplanation"))
             }
+            Section(L("settings.installationHealth")) {
+                LabeledContent(L("settings.installationStatus"), value: installationStatusLabel)
+                LabeledContent(L("settings.version"), value: installationHealth.version)
+                LabeledContent(L("settings.bundleIdentifier"), value: installationHealth.bundleIdentifier)
+                LabeledContent(
+                    L("settings.signingTeam"),
+                    value: installationHealth.signingTeamIdentifier ?? L("settings.unknownSigningTeam")
+                )
+                Text(installationHealth.bundleURL.path)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                Button(L("settings.revealInFinder")) {
+                    NSWorkspace.shared.activateFileViewerSelecting([installationHealth.bundleURL])
+                }
+                if installationHealth.status != .ready {
+                    Label(installationHealthHint, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
             Section(L("settings.localData")) {
                 Text(applicationSupportDirectory.path).textSelection(.enabled)
                 Button(L("settings.exportData"), action: exportLocalData)
@@ -266,8 +297,23 @@ struct SettingsView: View {
     }
 
     private var applicationSupportDirectory: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Menu Hub", isDirectory: true)
+        URL.applicationSupportDirectory.appending(path: "Menu Hub", directoryHint: .isDirectory)
+    }
+
+    private var installationStatusLabel: String {
+        switch installationHealth.status {
+        case .ready: L("settings.installationReady")
+        case .moveToApplications: L("settings.installationMove")
+        case .unsigned: L("settings.installationUnsigned")
+        }
+    }
+
+    private var installationHealthHint: String {
+        switch installationHealth.status {
+        case .ready: ""
+        case .moveToApplications: L("settings.installationMoveHint")
+        case .unsigned: L("settings.installationUnsignedHint")
+        }
     }
 
     private func preferenceBinding<Value>(_ keyPath: WritableKeyPath<Preferences, Value>) -> Binding<Value> {
@@ -299,8 +345,15 @@ struct SettingsView: View {
     }
 
     private func exportLocalData() {
-        guard let data = try? JSONEncoder().encode(controller.document) else { return }
-        save(data: data, suggestedName: "Menu-Hub-Data.json")
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "Menu-Hub-Data.json"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try SettingsExportService.live.export(controller.document, to: url)
+        } catch {
+            exportErrorMessage = error.localizedDescription
+            showsExportError = true
+        }
     }
 
     private func clearLocalData() {
@@ -315,12 +368,5 @@ struct SettingsView: View {
             loginModel.setEnabled(false)
             environment.applyPreferences(.default)
         }
-    }
-
-    private func save(data: Data, suggestedName: String) {
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = suggestedName
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        try? data.write(to: url, options: .atomic)
     }
 }
