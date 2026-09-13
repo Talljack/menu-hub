@@ -22,9 +22,9 @@
 
 - [x] Task 8 里程碑：185 项测试，0 失败。
 - [x] Task 8 里程碑：Debug 与 Release 构建成功。
-- [x] 当前候选代码运行 `swift test`：270 项 XCTest + 6 项 Swift Testing，0 失败。
+- [x] 当前候选代码运行 `swift test`：272 项 XCTest + 6 项 Swift Testing，0 失败。
 - [x] 当前候选代码运行完整 Xcode 单元/集成测试，0 失败。
-- [x] 独立 UI Test target 在已签名本机执行 12 个场景，覆盖 10 种语言代表布局、外观、权限 fixture、键盘、失败恢复和持久化，12/12 通过。
+- [x] 独立 UI Test target 在已签名本机执行 13 个场景，覆盖 10 种语言代表布局、外观、权限 fixture、键盘、收藏快捷键失败恢复和持久化，13/13 通过。
 - [x] 100 项搜索性能测试通过，平均单次低于 16 ms 门槛。
 
 ## 安装前门禁

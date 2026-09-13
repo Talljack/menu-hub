@@ -4,6 +4,48 @@ import XCTest
 
 @MainActor
 final class HubPanelModelTests: XCTestCase {
+    func testLiveUpdatesWaitForInitialCatalogLoadAndPreserveFavorites() async {
+        let store = FakeCatalogStore(controlLoads: true)
+        let accessibility = ControlledAccessibility()
+        let scheduler = ManualPanelLiveUpdateScheduler()
+        let controller = CatalogController(
+            store: store,
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        let model = HubPanelModel(
+            controller: controller,
+            initialPermissionState: .authorized,
+            liveUpdateScheduler: scheduler,
+            loadsController: true
+        )
+
+        model.startLiveUpdates()
+        await store.waitForLoadRequests(1)
+        XCTAssertEqual(model.operationState, .loading)
+        let scanCountBeforeLoad = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCountBeforeLoad, 0)
+
+        var document = testDocument()
+        document.items[0].isFavorite = true
+        await store.completeLoad(0, with: document)
+        await accessibility.waitForScanRequests(1)
+        let scanStarted = await waitUntil { model.operationState == .scanning }
+        XCTAssertTrue(scanStarted)
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        await accessibility.completeScan(0, with: .init(snapshots: [testSnapshot()], errors: []))
+        let scanCompleted = await waitUntil {
+            controller.hasCompletedScan
+                && model.operationState == .idle
+                && model.snapshot.favorites.map(\.id) == ["item"]
+        }
+
+        XCTAssertTrue(scanCompleted)
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        model.stopLiveUpdates()
+    }
+
     func testMonitoringCadenceKeepsForegroundFreshAndBacksOffWithoutUnreadItems() {
         XCTAssertEqual(PanelMonitoringMode.foreground.interval(hasUnreadBadge: false), 1)
         XCTAssertEqual(PanelMonitoringMode.background.interval(hasUnreadBadge: true), 5)

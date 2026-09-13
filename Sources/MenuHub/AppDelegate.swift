@@ -112,6 +112,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         configureStatusItems()
         configureMainMenu()
+        if let application = NSApp as? MenuHubApplication {
+            application.favoriteKeyHandler = { [weak self] event in
+                guard let self, popover.isShown,
+                      case .commandDigit(let digit) = PanelKeyboardRouter().command(for: event) else { return false }
+                panelModel.invokeFavorite(at: digit - 1)
+                return true
+            }
+        }
         #if DEBUG
         panelModel.hotKeyAvailable = uiTestRuntime == nil ? hotKeyController.registerCommandOptionControlM() : true
         #else

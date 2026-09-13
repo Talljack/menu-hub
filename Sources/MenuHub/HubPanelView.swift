@@ -400,10 +400,7 @@ struct HubPanelView: View {
     }
 
     private func invokeFavorite(_ index: Int) {
-        guard model.snapshot.favorites.indices.contains(index),
-              let item = model.items.first(where: { $0.id == model.snapshot.favorites[index].id }) else { return }
-        model.selectionID = item.id
-        model.invoke(item)
+        model.invokeFavorite(at: index)
     }
 
 }
@@ -416,6 +413,7 @@ private struct PanelKeyboardMonitor: NSViewRepresentable {
     final class MonitoringView: NSView {
         var handler: ((NSEvent) -> Bool)?
         private var monitor: Any?
+
         override func viewWillMove(toWindow newWindow: NSWindow?) {
             if newWindow == nil, let monitor {
                 NSEvent.removeMonitor(monitor)

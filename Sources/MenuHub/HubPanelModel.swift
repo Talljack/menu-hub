@@ -266,7 +266,8 @@ final class HubPanelModel: ObservableObject {
         liveUpdateScheduler: any PanelLiveUpdateScheduling = SystemPanelLiveUpdateScheduler(),
         accessibilityTrustProvider: @escaping @MainActor () -> Bool = { true },
         runningUserApplicationBundleIdentifiers: (@MainActor () -> Set<String>)? = nil,
-        failureFeedbackDuration: Duration = .seconds(3)
+        failureFeedbackDuration: Duration = .seconds(3),
+        loadsController: Bool = false
     ) {
         self.controller = controller
         self.now = now
@@ -277,7 +278,22 @@ final class HubPanelModel: ObservableObject {
         self.runningUserApplicationBundleIdentifiers = runningUserApplicationBundleIdentifiers
         self.failureFeedbackDuration = failureFeedbackDuration
         observeController()
-        rebuildSnapshot()
+        if loadsController {
+            operationState = .loading
+            Task { [weak self] in
+                await self?.controller.load()
+                guard let self else { return }
+                if operationState == .loading { operationState = .idle }
+                rebuildSnapshot()
+                if liveUpdatesActive, controller.document.preferences.automaticScanning, permissionGranted,
+                   inFlightLiveScanTask == nil, !controller.isScanning {
+                    startLiveScan(fullDiscovery: true)
+                    scheduleLiveUpdatesIfNeeded()
+                }
+            }
+        } else {
+            rebuildSnapshot()
+        }
     }
 
     var filteredItems: [HubPanelItem] {
@@ -303,6 +319,7 @@ final class HubPanelModel: ObservableObject {
     func startLiveUpdates() {
         stopLiveUpdates()
         monitoringMode = .foreground
+        guard operationState != .loading else { return }
         guard controller.document.preferences.automaticScanning else { return }
         let wasAuthorized = permissionGranted
         guard revalidateAccessibilityTrust(), wasAuthorized else { return }
@@ -546,6 +563,20 @@ final class HubPanelModel: ObservableObject {
         }
     }
 
+    func invokeFavorite(at index: Int) {
+        guard snapshot.favorites.indices.contains(index),
+              let item = items.first(where: { $0.id == snapshot.favorites[index].id }) else { return }
+        selectionID = item.id
+        invoke(
+            item,
+            presentationID: HubPanelPresentationContext.favoriteShortcutPresentationID(
+                itemID: item.id,
+                query: query,
+                layout: controller.document.preferences.layout
+            )
+        )
+    }
+
     func openHost(_ item: HubPanelItem, presentationID: HubItemPresentationID? = nil) {
         selectionID = item.id
         beginInvocation(
@@ -740,7 +771,7 @@ final class HubPanelModel: ObservableObject {
         controller.$document.combineLatest(controller.$runtimeSnapshots)
             .sink { [weak self] document, runtimeSnapshots in
                 guard let self else { return }
-                self.rebuildSnapshot()
+                self.rebuildSnapshot(document: document, runtimeSnapshots: runtimeSnapshots)
                 self.rebuildUnreadBadge(document: document, runtimeSnapshots: runtimeSnapshots)
                 let enabled = document.preferences.automaticScanning
                 guard self.lastAutomaticScanningPreference != enabled else { return }
@@ -812,8 +843,12 @@ final class HubPanelModel: ObservableObject {
         if unreadBadgePresentation != previous { scheduleLiveUpdatesIfNeeded() }
     }
 
-    private func rebuildSnapshot() {
-        let document = controller.document
+    private func rebuildSnapshot(
+        document: CatalogDocument? = nil,
+        runtimeSnapshots: [String: AccessibilitySnapshot]? = nil
+    ) {
+        let document = document ?? controller.document
+        let runtimeSnapshots = runtimeSnapshots ?? controller.runtimeSnapshots
         var available = document.items.filter { !$0.isIgnored }.sorted(by: Self.itemOrder)
         if let runningUserApplicationBundleIdentifiers {
             let running = runningUserApplicationBundleIdentifiers()
@@ -830,7 +865,7 @@ final class HubPanelModel: ObservableObject {
         }
         let visible: [MenuBarItemRecord]
         if permissionState == .authorized, controller.hasCompletedScan {
-            let runningItemIDs = Set(controller.runtimeSnapshots.keys)
+            let runningItemIDs = Set(runtimeSnapshots.keys)
             visible = available.filter { runningItemIDs.contains($0.id) }
         } else {
             visible = available
@@ -848,7 +883,7 @@ final class HubPanelModel: ObservableObject {
         )
         recentIDs = snapshot.recent.map(\.id)
         items = visible.map { record in
-            let runtime = controller.runtimeSnapshots[record.id]
+            let runtime = runtimeSnapshots[record.id]
             let effectiveLauncher = controller.canLaunchHost(for: record)
                 && (isLauncherMode || runtime == nil || record.capability == .launchOnly)
             return HubPanelItem(

@@ -61,9 +61,9 @@ struct UITestRuntime {
             controller: controller,
             initialPermissionState: permissionState,
             permissionEffectHandler: UITestPermissionEffects(),
-            accessibilityTrustProvider: { trusted }
+            accessibilityTrustProvider: { trusted },
+            loadsController: true
         )
-        Task { await controller.load() }
         return model
     }
 
@@ -103,6 +103,10 @@ struct UITestRuntime {
         value.language = language
         value.layout = layout
         value.automaticScanning = true
+        // Switching to the ASCII input source is required for deterministic
+        // text entry on localized developer machines. Keep the fixture popover
+        // open while that system-level focus transition occurs.
+        value.closeOnFocusLoss = false
         value.closeAfterSuccessfulTrigger = false
         return value
     }

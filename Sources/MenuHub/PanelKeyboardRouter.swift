@@ -1,4 +1,5 @@
 import AppKit
+import MenuHubCore
 
 enum PanelKeyboardModifier: Hashable { case command, option, control, shift }
 
@@ -73,6 +74,15 @@ struct PanelKeyboardRouter {
         case 53 where plain: return .escape
         case 3 where commandOnly: return .commandF
         case 40 where commandOnly: return .commandK
+        case 18 where commandOnly: return .commandDigit(1)
+        case 19 where commandOnly: return .commandDigit(2)
+        case 20 where commandOnly: return .commandDigit(3)
+        case 21 where commandOnly: return .commandDigit(4)
+        case 23 where commandOnly: return .commandDigit(5)
+        case 22 where commandOnly: return .commandDigit(6)
+        case 26 where commandOnly: return .commandDigit(7)
+        case 28 where commandOnly: return .commandDigit(8)
+        case 25 where commandOnly: return .commandDigit(9)
         default:
             guard commandOnly, let value = Int(context.characters ?? ""), (1...9).contains(value) else { return nil }
             return .commandDigit(value)
@@ -94,6 +104,18 @@ enum HubPanelPresentationContext {
 
     static func canonicalPresentationID(itemID: String, query: String) -> HubItemPresentationID {
         HubItemPresentationID(sectionID: canonicalSectionID(query: query), itemID: itemID)
+    }
+
+    static func favoriteShortcutPresentationID(
+        itemID: String,
+        query: String,
+        layout: LayoutPreference
+    ) -> HubItemPresentationID {
+        let hasQuery = !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard layout != .grid, !hasQuery else {
+            return canonicalPresentationID(itemID: itemID, query: query)
+        }
+        return HubItemPresentationID(sectionID: "favorites", itemID: itemID)
     }
 }
 

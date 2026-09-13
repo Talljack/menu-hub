@@ -4,6 +4,11 @@ import Security
 struct InstallationHealth: Equatable {
     static let expectedBundleIdentifier = "com.local.MenuHub"
     static let expectedSigningTeamIdentifier = "636LV693YD"
+    private static let developerIDRequirement = """
+    identifier "com.local.MenuHub" and anchor apple generic and \
+    certificate leaf[subject.OU] = "636LV693YD" and \
+    certificate leaf[field.1.2.840.113635.100.6.1.13] exists
+    """
 
     enum Status: Equatable {
         case ready
@@ -23,10 +28,10 @@ struct InstallationHealth: Equatable {
         let signature = signingIdentity(for: bundleURL)
         return evaluate(
             bundleURL: bundleURL,
-            bundleIdentifier: bundle.bundleIdentifier ?? expectedBundleIdentifier,
+            bundleIdentifier: bundle.bundleIdentifier ?? "",
             version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? L("settings.developmentBuild"),
             signingTeamIdentifier: signature.teamIdentifier,
-            signatureIsValid: signature.isValid
+            developerIDSignatureIsValid: signature.isValid
         )
     }
 
@@ -35,14 +40,14 @@ struct InstallationHealth: Equatable {
         bundleIdentifier: String,
         version: String,
         signingTeamIdentifier: String?,
-        signatureIsValid: Bool
+        developerIDSignatureIsValid: Bool
     ) -> Self {
         let standardizedPath = bundleURL.standardizedFileURL.path
         let isInApplications = standardizedPath == "/Applications/Menu Hub.app"
             || standardizedPath.hasPrefix("/Applications/Menu Hub.app/")
         let normalizedTeam = signingTeamIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
         let status: Status
-        let hasExpectedIdentity = signatureIsValid
+        let hasExpectedIdentity = developerIDSignatureIsValid
             && bundleIdentifier == expectedBundleIdentifier
             && normalizedTeam == expectedSigningTeamIdentifier
         if !hasExpectedIdentity {
@@ -65,8 +70,15 @@ struct InstallationHealth: Equatable {
         var staticCode: SecStaticCode?
         guard SecStaticCodeCreateWithPath(bundleURL as CFURL, [], &staticCode) == errSecSuccess,
               let staticCode else { return (nil, false) }
+        var requirement: SecRequirement?
+        guard SecRequirementCreateWithString(
+            developerIDRequirement as CFString,
+            [],
+            &requirement
+        ) == errSecSuccess,
+        let requirement else { return (nil, false) }
         let validationFlags = SecCSFlags(rawValue: kSecCSStrictValidate | kSecCSCheckAllArchitectures)
-        let isValid = SecStaticCodeCheckValidity(staticCode, validationFlags, nil) == errSecSuccess
+        let isValid = SecStaticCodeCheckValidity(staticCode, validationFlags, requirement) == errSecSuccess
         var information: CFDictionary?
         guard SecCodeCopySigningInformation(
             staticCode,

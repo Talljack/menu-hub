@@ -171,6 +171,22 @@ final class MenuHubUITests: XCTestCase {
         XCTAssertTrue(app.buttons["hub.item.actions.openHost"].exists)
     }
 
+    func testFavoriteShortcutFailureAnchorsRecoveryPanelInCompactLayout() {
+        launch(
+            permission: "authorized", catalog: "mixed", language: "en",
+            actionFailure: "targetUnresponsive", suite: "favorite-shortcut", reset: true
+        )
+        let search = element(identifier: "hub.search")
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.click()
+
+        app.typeKey("1", modifierFlags: .command)
+
+        XCTAssertTrue(app.staticTexts["Action Failed"].waitForExistence(timeout: 3))
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["hub.item.actions.primary"].label.hasPrefix("Retry"))
+    }
+
     private func launch(
         permission: String,
         catalog: String,
@@ -219,6 +235,9 @@ final class MenuHubUITests: XCTestCase {
 }
 
 private enum FixtureItemID {
-    static let lark = "hub.item.com.larksuite.mac|ax:lark"
-    static let weChat = "hub.item.com.tencent.xinwechat|ax:wechat"
+    // The persisted fixture deliberately supplies record IDs. Reconciliation
+    // retains those IDs so favorites, aliases, and groups do not break when an
+    // Accessibility identity changes.
+    static let lark = "hub.item.lark"
+    static let weChat = "hub.item.wechat"
 }

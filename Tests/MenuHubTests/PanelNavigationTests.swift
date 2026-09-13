@@ -36,7 +36,7 @@ final class PanelNavigationTests: XCTestCase {
                 bundleIdentifier: "com.local.MenuHub",
                 version: "0.1.5",
                 signingTeamIdentifier: "636LV693YD",
-                signatureIsValid: true
+                developerIDSignatureIsValid: true
             ).status,
             .ready
         )
@@ -46,7 +46,7 @@ final class PanelNavigationTests: XCTestCase {
                 bundleIdentifier: "com.local.MenuHub",
                 version: "0.1.5",
                 signingTeamIdentifier: "636LV693YD",
-                signatureIsValid: true
+                developerIDSignatureIsValid: true
             ).status,
             .moveToApplications
         )
@@ -56,7 +56,7 @@ final class PanelNavigationTests: XCTestCase {
                 bundleIdentifier: "com.local.MenuHub",
                 version: "0.1.5",
                 signingTeamIdentifier: nil,
-                signatureIsValid: false
+                developerIDSignatureIsValid: false
             ).status,
             .unsigned
         )
@@ -66,7 +66,7 @@ final class PanelNavigationTests: XCTestCase {
                 bundleIdentifier: "com.example.Imposter",
                 version: "0.1.5",
                 signingTeamIdentifier: "636LV693YD",
-                signatureIsValid: true
+                developerIDSignatureIsValid: true
             ).status,
             .unsigned
         )
@@ -76,7 +76,27 @@ final class PanelNavigationTests: XCTestCase {
                 bundleIdentifier: "com.local.MenuHub",
                 version: "0.1.5",
                 signingTeamIdentifier: "OTHERTEAM",
-                signatureIsValid: true
+                developerIDSignatureIsValid: true
+            ).status,
+            .unsigned
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD",
+                developerIDSignatureIsValid: true
+            ).status,
+            .unsigned
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD",
+                developerIDSignatureIsValid: false
             ).status,
             .unsigned
         )
@@ -232,6 +252,27 @@ final class PanelNavigationTests: XCTestCase {
         XCTAssertEqual(HubPanelPresentationContext.canonicalPresentationID(itemID: "item", query: " 6 ").rawValue, "search:item")
     }
 
+    func testFavoriteShortcutPresentationUsesAVisibleSectionForEveryLayout() {
+        XCTAssertEqual(
+            HubPanelPresentationContext.favoriteShortcutPresentationID(
+                itemID: "item", query: "", layout: .compact
+            ),
+            HubItemPresentationID(sectionID: "favorites", itemID: "item")
+        )
+        XCTAssertEqual(
+            HubPanelPresentationContext.favoriteShortcutPresentationID(
+                itemID: "item", query: "", layout: .grid
+            ),
+            .canonical(itemID: "item")
+        )
+        XCTAssertEqual(
+            HubPanelPresentationContext.favoriteShortcutPresentationID(
+                itemID: "item", query: "lark", layout: .compact
+            ),
+            HubItemPresentationID(sectionID: "search", itemID: "item")
+        )
+    }
+
     func testKeyboardEventContextProtectsIMEAndModifiedArrows() {
         let router = PanelKeyboardRouter()
         XCTAssertNil(router.command(for: .init(keyCode: 36, characters: "\r", modifiers: [], hasMarkedText: true)))
@@ -240,6 +281,8 @@ final class PanelNavigationTests: XCTestCase {
         XCTAssertNil(router.command(for: .init(keyCode: 125, characters: nil, modifiers: [.option], hasMarkedText: false)))
         XCTAssertEqual(router.command(for: .init(keyCode: 126, characters: nil, modifiers: [], hasMarkedText: false)), .upArrow)
         XCTAssertEqual(router.command(for: .init(keyCode: 40, characters: "k", modifiers: [.command], hasMarkedText: false)), .commandK)
+        XCTAssertEqual(router.command(for: .init(keyCode: 18, characters: "¡", modifiers: [.command], hasMarkedText: false)), .commandDigit(1))
+        XCTAssertEqual(router.command(for: .init(keyCode: 25, characters: nil, modifiers: [.command], hasMarkedText: false)), .commandDigit(9))
     }
 
     func testPanelBackgroundModeNeverStacksMaterialWhenTransparencyIsReduced() {

@@ -61,7 +61,7 @@ targets:
         LSMinimumSystemVersion: "14.0"
         LSUIElement: true
         NSAccessibilityUsageDescription: Menu Hub reads accessible menu bar item names and performs a press only when you explicitly choose an item. Data stays on this Mac.
-        NSPrincipalClass: NSApplication
+        NSPrincipalClass: MenuHub.MenuHubApplication
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.local.MenuHub
