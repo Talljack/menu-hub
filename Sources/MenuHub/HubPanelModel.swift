@@ -878,7 +878,7 @@ final class HubPanelModel: ObservableObject {
             visible = available
         }
         let smart = SmartGroupEngine(now: now)
-        snapshot = PanelSnapshot(
+        let nextSnapshot = PanelSnapshot(
             favorites: visible.filter(\.isFavorite),
             recent: smart.recentItems(in: visible),
             frequent: smart.frequentItems(in: visible),
@@ -888,6 +888,13 @@ final class HubPanelModel: ObservableObject {
             all: visible,
             search: SearchIndex.items(matching: query, in: visible, groups: document.groups)
         )
+        let nextSelectableRecords = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? nextSnapshot.all
+            : nextSnapshot.search
+        if let selectionID, !nextSelectableRecords.contains(where: { $0.id == selectionID }) {
+            self.selectionID = nil
+        }
+        snapshot = nextSnapshot
         recentIDs = snapshot.recent.map(\.id)
         items = visible.map { record in
             let runtime = runtimeSnapshots[record.id]
@@ -898,7 +905,6 @@ final class HubPanelModel: ObservableObject {
                 hostIcon: controller.hostIcons[record.id]
             )
         }
-        if let selectionID, !selectableRecords.contains(where: { $0.id == selectionID }) { self.selectionID = nil }
     }
 
     private static func itemOrder(_ lhs: MenuBarItemRecord, _ rhs: MenuBarItemRecord) -> Bool {

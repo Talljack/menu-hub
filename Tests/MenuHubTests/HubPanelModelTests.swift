@@ -1,3 +1,4 @@
+import Combine
 import XCTest
 @testable import MenuHub
 @testable import MenuHubCore
@@ -151,6 +152,75 @@ final class HubPanelModelTests: XCTestCase {
         model.clearSearch()
         XCTAssertNil(model.selectionID)
         XCTAssertEqual(model.query, "")
+    }
+
+    func testAutomaticRescanPublishesClearedSelectionBeforeSelectedItemDisappears() async {
+        let accessibility = ControlledAccessibility()
+        let controller = CatalogController(
+            store: FakeCatalogStore(loadResults: [twoItemDocument()]),
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        await controller.load()
+        let initialScan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(
+            0,
+            with: .init(snapshots: [testSnapshot(id: "a"), testSnapshot(id: "b")], errors: [])
+        )
+        await initialScan.value
+        let model = HubPanelModel(controller: controller, now: { testNow }, initialPermissionState: .authorized)
+        model.selectionID = "a"
+
+        var selectionWhenReplacementSnapshotPublished: String?
+        var cancellables = Set<AnyCancellable>()
+        model.$snapshot
+            .dropFirst()
+            .filter { $0.all.map(\.id) == ["b"] }
+            .sink { _ in selectionWhenReplacementSnapshotPublished = model.selectionID }
+            .store(in: &cancellables)
+
+        let rescan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(2)
+        await accessibility.completeScan(1, with: .init(snapshots: [testSnapshot(id: "b")], errors: []))
+        await rescan.value
+
+        XCTAssertEqual(model.snapshot.all.map(\.id), ["b"])
+        XCTAssertNil(selectionWhenReplacementSnapshotPublished)
+        XCTAssertNil(model.selectionID)
+    }
+
+    func testAutomaticRescanKeepsSelectionAttachedToSameItemWhenEarlierRowDisappears() async {
+        let accessibility = ControlledAccessibility(controlPress: true)
+        let controller = CatalogController(
+            store: FakeCatalogStore(loadResults: [twoItemDocument()]),
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        await controller.load()
+        let initialScan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(
+            0,
+            with: .init(snapshots: [testSnapshot(id: "a"), testSnapshot(id: "b")], errors: [])
+        )
+        await initialScan.value
+        let model = HubPanelModel(controller: controller, now: { testNow }, initialPermissionState: .authorized)
+        model.selectionID = "b"
+
+        let rescan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(2)
+        await accessibility.completeScan(1, with: .init(snapshots: [testSnapshot(id: "b")], errors: []))
+        await rescan.value
+
+        XCTAssertEqual(model.snapshot.all.map(\.id), ["b"])
+        XCTAssertEqual(model.selectionID, "b")
+        model.invokeSelection(forceLaunchHost: false)
+        await accessibility.waitForPressRequest()
+        XCTAssertEqual(model.operationState, .invoking(itemID: "b"))
+        await accessibility.completePress(id: "b")
     }
 
     func testLegacyProjectionIncludesPersistedLauncherAndFailsClosedForPressWithoutSnapshot() async {
