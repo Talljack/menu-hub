@@ -450,19 +450,33 @@ final class HubPanelModel: ObservableObject {
         applyPermissionEvent(.openedSettings)
     }
 
-    func invoke(_ item: HubPanelItem) {
+    func invoke(_ item: HubPanelItem, presentationID: HubItemPresentationID? = nil) {
+        let recoveryPresentationID = presentationID
+            ?? HubPanelPresentationContext.canonicalPresentationID(itemID: item.id, query: query)
         if !item.isLaunchOnly, !revalidateAccessibilityTrust() {
             guard controller.canLaunchHost(for: item.record) else {
                 statusMessageKey = .permissionDenied
                 return
             }
-            beginInvocation(itemID: item.id, forceLaunchHost: true)
+            beginInvocation(
+                itemID: item.id,
+                forceLaunchHost: true,
+                recoveryPresentationID: recoveryPresentationID
+            )
             return
         }
-        beginInvocation(itemID: item.id, forceLaunchHost: item.isLaunchOnly)
+        beginInvocation(
+            itemID: item.id,
+            forceLaunchHost: item.isLaunchOnly,
+            recoveryPresentationID: recoveryPresentationID
+        )
     }
 
-    private func beginInvocation(itemID: String, forceLaunchHost: Bool) {
+    private func beginInvocation(
+        itemID: String,
+        forceLaunchHost: Bool,
+        recoveryPresentationID: HubItemPresentationID
+    ) {
         suspendLiveScanningForInvocation()
         invocationTask?.cancel()
         invocationGeneration += 1
@@ -480,8 +494,16 @@ final class HubPanelModel: ObservableObject {
             operationState = controller.isScanning ? .scanning : .idle
             switch outcome {
             case .pressed, .openedHost: publishSuccess(for: itemID)
-            case .failed(let failure): publishFailure(Self.messageKey(for: failure), itemID: itemID, generation: generation)
-            case .unavailable: publishFailure(.unavailable, itemID: itemID, generation: generation)
+            case .failed(let failure):
+                publishFailure(
+                    Self.messageKey(for: failure), itemID: itemID,
+                    presentationID: recoveryPresentationID, generation: generation
+                )
+            case .unavailable:
+                publishFailure(
+                    .unavailable, itemID: itemID,
+                    presentationID: recoveryPresentationID, generation: generation
+                )
             }
             resumeMonitoringAfterInvocation()
         }
@@ -489,7 +511,11 @@ final class HubPanelModel: ObservableObject {
 
     func invokeSelection(forceLaunchHost: Bool) {
         guard let selectionID, let item = items.first(where: { $0.id == selectionID }), item.canInvoke else { return }
-        if !forceLaunchHost { invoke(item); return }
+        let recoveryPresentationID = HubPanelPresentationContext.canonicalPresentationID(
+            itemID: item.id,
+            query: query
+        )
+        if !forceLaunchHost { invoke(item, presentationID: recoveryPresentationID); return }
         suspendLiveScanningForInvocation()
         invocationTask?.cancel()
         invocationGeneration += 1
@@ -505,16 +531,29 @@ final class HubPanelModel: ObservableObject {
             operationState = controller.isScanning ? .scanning : .idle
             switch outcome {
             case .pressed, .openedHost: publishSuccess(for: item.id)
-            case .failed(let failure): publishFailure(Self.messageKey(for: failure), itemID: item.id, generation: generation)
-            case .unavailable: publishFailure(.unavailable, itemID: item.id, generation: generation)
+            case .failed(let failure):
+                publishFailure(
+                    Self.messageKey(for: failure), itemID: item.id,
+                    presentationID: recoveryPresentationID, generation: generation
+                )
+            case .unavailable:
+                publishFailure(
+                    .unavailable, itemID: item.id,
+                    presentationID: recoveryPresentationID, generation: generation
+                )
             }
             resumeMonitoringAfterInvocation()
         }
     }
 
-    func openHost(_ item: HubPanelItem) {
+    func openHost(_ item: HubPanelItem, presentationID: HubItemPresentationID? = nil) {
         selectionID = item.id
-        invokeSelection(forceLaunchHost: true)
+        beginInvocation(
+            itemID: item.id,
+            forceLaunchHost: true,
+            recoveryPresentationID: presentationID
+                ?? HubPanelPresentationContext.canonicalPresentationID(itemID: item.id, query: query)
+        )
     }
 
     func toggleFavorite(_ item: HubPanelItem) {
@@ -567,13 +606,15 @@ final class HubPanelModel: ObservableObject {
         }
     }
 
-    private func publishFailure(_ message: PanelStatusMessageKey, itemID: String, generation: Int) {
+    private func publishFailure(
+        _ message: PanelStatusMessageKey,
+        itemID: String,
+        presentationID: HubItemPresentationID,
+        generation: Int
+    ) {
         statusMessageKey = message
         lastFailedItemID = itemID
-        actionMenuPresentationID = HubPanelPresentationContext.canonicalPresentationID(
-            itemID: itemID,
-            query: query
-        )
+        actionMenuPresentationID = presentationID
         failureFeedbackTask?.cancel()
         let duration = failureFeedbackDuration
         failureFeedbackTask = Task { [weak self] in
@@ -581,6 +622,7 @@ final class HubPanelModel: ObservableObject {
             guard let self, !Task.isCancelled, generation == invocationGeneration,
                   lastFailedItemID == itemID else { return }
             lastFailedItemID = nil
+            if actionMenuPresentationID == presentationID { actionMenuPresentationID = nil }
             if statusMessageKey == message { statusMessageKey = nil }
             controller.clearActionFailure()
         }

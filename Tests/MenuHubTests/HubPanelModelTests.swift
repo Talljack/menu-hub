@@ -515,12 +515,13 @@ final class HubPanelModelTests: XCTestCase {
         await scan.value
         let model = HubPanelModel(controller: controller, initialPermissionState: .authorized)
 
-        model.invoke(model.items[0])
+        let sourcePresentationID = HubItemPresentationID(sectionID: "favorites", itemID: "item")
+        model.invoke(model.items[0], presentationID: sourcePresentationID)
         let failed = await waitUntil { model.lastFailedItemID == "item" }
 
         XCTAssertTrue(failed)
         XCTAssertEqual(model.statusMessageKey, .targetUnresponsive)
-        XCTAssertEqual(model.actionMenuPresentationID, .canonical(itemID: "item"))
+        XCTAssertEqual(model.actionMenuPresentationID, sourcePresentationID)
         model.invoke(model.items[0])
         XCTAssertNil(model.lastFailedItemID)
     }
@@ -550,6 +551,7 @@ final class HubPanelModelTests: XCTestCase {
         XCTAssertNil(model.lastFailedItemID)
         XCTAssertNil(model.statusMessageKey)
         XCTAssertNil(controller.errors.actionFailure)
+        XCTAssertNil(model.actionMenuPresentationID)
     }
 
     func testSuccessfulInvocationShowsRowFeedbackWhenClosePreferenceIsOff() async {

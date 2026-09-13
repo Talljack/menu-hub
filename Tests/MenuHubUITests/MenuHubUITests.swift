@@ -108,7 +108,11 @@ final class MenuHubUITests: XCTestCase {
         launch(permission: "authorized", catalog: "mixed", language: "en", reset: true)
         XCTAssertTrue(element(identifier: "hub.search").waitForExistence(timeout: 5))
         XCTAssertNotEqual(app.state, .notRunning)
-        XCTAssertTrue(element(identifier: FixtureItemID.lark).exists)
+        let lark = element(identifier: FixtureItemID.lark)
+        XCTAssertTrue(lark.exists)
+        app.typeKey(.downArrow, modifierFlags: [])
+        app.typeKey("k", modifierFlags: .command)
+        XCTAssertTrue(element(identifier: "hub.item.actions.panel").waitForExistence(timeout: 3))
     }
 
     func testIconGridKeyboardSelectionOpensSelectedItemActions() {
@@ -205,12 +209,12 @@ final class MenuHubUITests: XCTestCase {
     /// deterministic, then restores the user's original source immediately.
     private func typeText(_ text: String, into element: XCUIElement) {
         let original = TISCopyCurrentKeyboardInputSource().takeRetainedValue()
+        defer { TISSelectInputSource(original) }
         let ascii = TISCopyCurrentASCIICapableKeyboardInputSource().takeRetainedValue()
         TISSelectInputSource(ascii)
         RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         element.click()
         element.typeText(text)
-        TISSelectInputSource(original)
     }
 }
 

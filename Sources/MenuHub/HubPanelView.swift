@@ -182,8 +182,8 @@ struct HubPanelView: View {
                             isMember: item.record.groupIDs.contains(group.id)
                         )
                     },
-                    action: { model.selectionID = item.id; model.invoke(item) },
-                    openHost: { model.openHost(item) },
+                    action: { model.selectionID = item.id; model.invoke(item, presentationID: presentationID) },
+                    openHost: { model.openHost(item, presentationID: presentationID) },
                     toggleFavorite: { model.toggleFavorite(item) },
                     saveAlias: { alias in Task { await model.setAlias(alias, for: item) } },
                     setMembership: { groupID, member in
@@ -243,8 +243,8 @@ struct HubPanelView: View {
                                     isMember: item.record.groupIDs.contains(group.id)
                                 )
                             },
-                            action: { model.selectionID = item.id; model.invoke(item) },
-                            openHost: { model.openHost(item) },
+                            action: { model.selectionID = item.id; model.invoke(item, presentationID: presentationID) },
+                            openHost: { model.openHost(item, presentationID: presentationID) },
                             toggleFavorite: { model.toggleFavorite(item) },
                             saveAlias: { alias in Task { await model.setAlias(alias, for: item) } },
                             setMembership: { groupID, member in
@@ -312,7 +312,8 @@ struct HubPanelView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .help(L("panel.updatedNow"))
-                    .accessibilityLabel(L("panel.updatedNow"))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(lastRefreshAt, style: .relative))
             }
             if model.hotKeyAvailable {
                 Text(ShortcutRecorderPolicy.label(

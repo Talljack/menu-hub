@@ -89,6 +89,12 @@ jobs:
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: Require signed UI test credentials on trusted builds
+        if: github.event_name != 'pull_request' && env.RUN_UI_TESTS != 'true'
+        run: |
+          echo "Trusted main, tag, and manual builds require all four APPLE_DEVELOPMENT_* secrets so the macOS UI suite cannot be skipped." >&2
+          exit 1
+
       - name: Import Apple Development certificate for UI tests
         if: env.RUN_UI_TESTS == 'true'
         env:

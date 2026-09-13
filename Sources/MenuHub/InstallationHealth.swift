@@ -2,6 +2,9 @@ import Foundation
 import Security
 
 struct InstallationHealth: Equatable {
+    static let expectedBundleIdentifier = "com.local.MenuHub"
+    static let expectedSigningTeamIdentifier = "636LV693YD"
+
     enum Status: Equatable {
         case ready
         case moveToApplications
@@ -17,11 +20,13 @@ struct InstallationHealth: Equatable {
     static var current: Self {
         let bundle = Bundle.main
         let bundleURL = bundle.bundleURL
+        let signature = signingIdentity(for: bundleURL)
         return evaluate(
             bundleURL: bundleURL,
-            bundleIdentifier: bundle.bundleIdentifier ?? "com.local.MenuHub",
+            bundleIdentifier: bundle.bundleIdentifier ?? expectedBundleIdentifier,
             version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? L("settings.developmentBuild"),
-            signingTeamIdentifier: signingTeamIdentifier(for: bundleURL)
+            signingTeamIdentifier: signature.teamIdentifier,
+            signatureIsValid: signature.isValid
         )
     }
 
@@ -29,14 +34,18 @@ struct InstallationHealth: Equatable {
         bundleURL: URL,
         bundleIdentifier: String,
         version: String,
-        signingTeamIdentifier: String?
+        signingTeamIdentifier: String?,
+        signatureIsValid: Bool
     ) -> Self {
         let standardizedPath = bundleURL.standardizedFileURL.path
         let isInApplications = standardizedPath == "/Applications/Menu Hub.app"
             || standardizedPath.hasPrefix("/Applications/Menu Hub.app/")
         let normalizedTeam = signingTeamIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
         let status: Status
-        if normalizedTeam?.isEmpty != false {
+        let hasExpectedIdentity = signatureIsValid
+            && bundleIdentifier == expectedBundleIdentifier
+            && normalizedTeam == expectedSigningTeamIdentifier
+        if !hasExpectedIdentity {
             status = .unsigned
         } else if !isInApplications {
             status = .moveToApplications
@@ -52,17 +61,19 @@ struct InstallationHealth: Equatable {
         )
     }
 
-    private static func signingTeamIdentifier(for bundleURL: URL) -> String? {
+    private static func signingIdentity(for bundleURL: URL) -> (teamIdentifier: String?, isValid: Bool) {
         var staticCode: SecStaticCode?
         guard SecStaticCodeCreateWithPath(bundleURL as CFURL, [], &staticCode) == errSecSuccess,
-              let staticCode else { return nil }
+              let staticCode else { return (nil, false) }
+        let validationFlags = SecCSFlags(rawValue: kSecCSStrictValidate | kSecCSCheckAllArchitectures)
+        let isValid = SecStaticCodeCheckValidity(staticCode, validationFlags, nil) == errSecSuccess
         var information: CFDictionary?
         guard SecCodeCopySigningInformation(
             staticCode,
             SecCSFlags(rawValue: kSecCSSigningInformation),
             &information
         ) == errSecSuccess,
-        let values = information as? [CFString: Any] else { return nil }
-        return values[kSecCodeInfoTeamIdentifier] as? String
+        let values = information as? [CFString: Any] else { return (nil, false) }
+        return (values[kSecCodeInfoTeamIdentifier] as? String, isValid)
     }
 }

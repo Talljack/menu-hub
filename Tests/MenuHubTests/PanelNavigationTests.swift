@@ -35,7 +35,8 @@ final class PanelNavigationTests: XCTestCase {
                 bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
                 bundleIdentifier: "com.local.MenuHub",
                 version: "0.1.5",
-                signingTeamIdentifier: "636LV693YD"
+                signingTeamIdentifier: "636LV693YD",
+                signatureIsValid: true
             ).status,
             .ready
         )
@@ -44,7 +45,8 @@ final class PanelNavigationTests: XCTestCase {
                 bundleURL: URL(fileURLWithPath: "/Users/me/Downloads/Menu Hub.app"),
                 bundleIdentifier: "com.local.MenuHub",
                 version: "0.1.5",
-                signingTeamIdentifier: "636LV693YD"
+                signingTeamIdentifier: "636LV693YD",
+                signatureIsValid: true
             ).status,
             .moveToApplications
         )
@@ -53,7 +55,28 @@ final class PanelNavigationTests: XCTestCase {
                 bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
                 bundleIdentifier: "com.local.MenuHub",
                 version: "0.1.5",
-                signingTeamIdentifier: nil
+                signingTeamIdentifier: nil,
+                signatureIsValid: false
+            ).status,
+            .unsigned
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.example.Imposter",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD",
+                signatureIsValid: true
+            ).status,
+            .unsigned
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: "OTHERTEAM",
+                signatureIsValid: true
             ).status,
             .unsigned
         )
