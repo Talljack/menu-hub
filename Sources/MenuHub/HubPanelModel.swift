@@ -345,6 +345,7 @@ final class HubPanelModel: ObservableObject {
             return
         }
         monitoringMode = .background
+        guard operationState != .loading else { return }
         guard controller.document.preferences.automaticScanning else {
             unreadBadgePresentation = .hidden
             return
@@ -395,7 +396,7 @@ final class HubPanelModel: ObservableObject {
     }
 
     private func scheduleLiveUpdatesIfNeeded() {
-        guard liveUpdatesActive, permissionGranted,
+        guard operationState != .loading, liveUpdatesActive, permissionGranted,
               lastAutomaticScanningPreference ?? controller.document.preferences.automaticScanning,
               let interval = monitoringMode.interval(hasUnreadBadge: unreadBadgePresentation != .hidden) else { return }
         if liveUpdateCancellation != nil, scheduledLiveUpdateInterval == interval { return }
@@ -403,7 +404,8 @@ final class HubPanelModel: ObservableObject {
         liveUpdateCancellation = nil
         scheduledLiveUpdateInterval = nil
         liveUpdateCancellation = liveUpdateScheduler.schedule(every: interval) { [weak self] in
-            guard let self, self.liveUpdatesActive, self.permissionGranted,
+            guard let self, self.operationState != .loading,
+                  self.liveUpdatesActive, self.permissionGranted,
                   self.inFlightLiveScanTask == nil && !self.controller.isScanning else { return }
             if case .invoking = self.operationState { return }
             let fullDiscovery = self.monitoringMode == .foreground
@@ -414,7 +416,7 @@ final class HubPanelModel: ObservableObject {
     }
 
     private func startLiveScan(fullDiscovery: Bool) {
-        guard liveUpdatesActive, revalidateAccessibilityTrust() else { return }
+        guard operationState != .loading, liveUpdatesActive, revalidateAccessibilityTrust() else { return }
         if fullDiscovery { nextFullDiscoveryAt = now().addingTimeInterval(20) }
         liveScanGeneration += 1
         let generation = liveScanGeneration

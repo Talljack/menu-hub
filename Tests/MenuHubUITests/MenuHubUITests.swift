@@ -6,7 +6,10 @@ final class MenuHubUITests: XCTestCase {
     private var app: XCUIApplication!
 
     func testAuthorizedMixedPanelSupportsSearchKeyboardAndStableIdentifiers() {
-        launch(permission: "authorized", catalog: "mixed", language: "en", reset: true)
+        launch(
+            permission: "authorized", catalog: "mixed", language: "en",
+            keepOpenOnFocusLoss: true, reset: true
+        )
 
         let search = element(identifier: "hub.search")
         XCTAssertTrue(search.waitForExistence(timeout: 5))
@@ -195,6 +198,7 @@ final class MenuHubUITests: XCTestCase {
         layout: String = "compact",
         actionFailure: String? = nil,
         onboarding: Bool = false,
+        keepOpenOnFocusLoss: Bool = false,
         suite: String = UUID().uuidString,
         reset: Bool = false
     ) {
@@ -208,6 +212,7 @@ final class MenuHubUITests: XCTestCase {
             "-uiTestLayout", layout,
             "-uiTestSuite", suite,
             "-showOnboarding", onboarding ? "1" : "0",
+            "-uiTestKeepOpenOnFocusLoss", keepOpenOnFocusLoss ? "1" : "0",
             "-resetFixture", reset ? "1" : "0"
         ]
         if let actionFailure {

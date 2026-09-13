@@ -46,6 +46,47 @@ final class HubPanelModelTests: XCTestCase {
         model.stopLiveUpdates()
     }
 
+    func testBackgroundMonitoringAndPanelAppearanceCannotRaceInitialCatalogLoad() async {
+        let store = FakeCatalogStore(controlLoads: true)
+        let accessibility = ControlledAccessibility()
+        let scheduler = ManualPanelLiveUpdateScheduler()
+        let controller = CatalogController(
+            store: store,
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        let model = HubPanelModel(
+            controller: controller,
+            initialPermissionState: .authorized,
+            liveUpdateScheduler: scheduler,
+            loadsController: true
+        )
+
+        model.startBackgroundUpdates()
+        model.panelDidAppear()
+        await store.waitForLoadRequests(1)
+
+        XCTAssertEqual(model.operationState, .loading)
+        XCTAssertEqual(scheduler.scheduledCount, 0)
+        scheduler.fire()
+        let scanCountWhileLoading = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCountWhileLoading, 0)
+
+        var document = testDocument()
+        document.items[0].isFavorite = true
+        await store.completeLoad(0, with: document)
+        await accessibility.waitForScanRequests(1)
+
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        XCTAssertEqual(scheduler.scheduledCount, 1)
+        await accessibility.completeScan(0, with: .init(snapshots: [testSnapshot()], errors: []))
+        let completed = await waitUntil { controller.hasCompletedScan && model.operationState == .idle }
+        XCTAssertTrue(completed)
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        model.stopLiveUpdates()
+    }
+
     func testMonitoringCadenceKeepsForegroundFreshAndBacksOffWithoutUnreadItems() {
         XCTAssertEqual(PanelMonitoringMode.foreground.interval(hasUnreadBadge: false), 1)
         XCTAssertEqual(PanelMonitoringMode.background.interval(hasUnreadBadge: true), 5)

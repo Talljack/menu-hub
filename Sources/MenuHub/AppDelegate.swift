@@ -430,15 +430,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func registerPersistedHotKeyWhenLoaded() {
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            for _ in 0..<100 where panelModel.operationState == .loading {
-                try? await Task.sleep(for: .milliseconds(20))
+        panelModel.$operationState
+            .filter { $0 != .loading }
+            .prefix(1)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                let preferences = panelModel.catalogController.document.preferences
+                let descriptor = HotKeyDescriptor(preferences.hotKey)
+                panelModel.hotKeyAvailable = hotKeyController.register(descriptor) == .registered
+                applyPreferences(preferences)
             }
-            let descriptor = HotKeyDescriptor(panelModel.catalogController.document.preferences.hotKey)
-            panelModel.hotKeyAvailable = hotKeyController.register(descriptor) == .registered
-            applyPreferences(panelModel.catalogController.document.preferences)
-        }
+            .store(in: &diagnosticSubscriptions)
     }
 
     private func applyPreferences(_ preferences: Preferences) {
