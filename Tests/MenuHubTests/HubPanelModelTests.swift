@@ -1,3 +1,4 @@
+import Combine
 import XCTest
 @testable import MenuHub
 @testable import MenuHubCore
@@ -151,6 +152,80 @@ final class HubPanelModelTests: XCTestCase {
         model.clearSearch()
         XCTAssertNil(model.selectionID)
         XCTAssertEqual(model.query, "")
+    }
+
+    func testAutomaticRescanPublishesClearedSelectionBeforeSelectedItemDisappears() async {
+        let accessibility = ControlledAccessibility()
+        let controller = CatalogController(
+            store: FakeCatalogStore(loadResults: [twoItemDocument()]),
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        await controller.load()
+        let initialScan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(
+            0,
+            with: .init(snapshots: [testSnapshot(id: "a"), testSnapshot(id: "b")], errors: [])
+        )
+        await initialScan.value
+        let model = HubPanelModel(controller: controller, now: { testNow }, initialPermissionState: .authorized)
+        model.selectionID = "a"
+
+        var didObserveReplacementSnapshot = false
+        var selectionWhenReplacementSnapshotPublished: String?
+        var cancellables = Set<AnyCancellable>()
+        model.$snapshot
+            .dropFirst()
+            .filter { $0.all.map(\.id) == ["b"] }
+            .sink { _ in
+                didObserveReplacementSnapshot = true
+                selectionWhenReplacementSnapshotPublished = model.selectionID
+            }
+            .store(in: &cancellables)
+
+        let rescan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(2)
+        await accessibility.completeScan(1, with: .init(snapshots: [testSnapshot(id: "b")], errors: []))
+        await rescan.value
+
+        XCTAssertEqual(model.snapshot.all.map(\.id), ["b"])
+        XCTAssertTrue(didObserveReplacementSnapshot)
+        XCTAssertNil(selectionWhenReplacementSnapshotPublished)
+        XCTAssertNil(model.selectionID)
+    }
+
+    func testAutomaticRescanKeepsSelectionAttachedToSameItemWhenEarlierRowDisappears() async {
+        let accessibility = ControlledAccessibility(controlPress: true)
+        let controller = CatalogController(
+            store: FakeCatalogStore(loadResults: [twoItemDocument()]),
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        await controller.load()
+        let initialScan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(
+            0,
+            with: .init(snapshots: [testSnapshot(id: "a"), testSnapshot(id: "b")], errors: [])
+        )
+        await initialScan.value
+        let model = HubPanelModel(controller: controller, now: { testNow }, initialPermissionState: .authorized)
+        model.selectionID = "b"
+
+        let rescan = Task { await controller.scan() }
+        await accessibility.waitForScanRequests(2)
+        await accessibility.completeScan(1, with: .init(snapshots: [testSnapshot(id: "b")], errors: []))
+        await rescan.value
+
+        XCTAssertEqual(model.snapshot.all.map(\.id), ["b"])
+        XCTAssertEqual(model.selectionID, "b")
+        model.invokeSelection(forceLaunchHost: false)
+        await accessibility.waitForPressRequest()
+        XCTAssertEqual(model.operationState, .invoking(itemID: "b"))
+        await accessibility.completePress(id: "b")
     }
 
     func testLegacyProjectionIncludesPersistedLauncherAndFailsClosedForPressWithoutSnapshot() async {
@@ -544,7 +619,74 @@ final class HubPanelModelTests: XCTestCase {
         let refreshCount = await accessibility.refreshRequestCount
         XCTAssertEqual(scanCount, 2)
         XCTAssertEqual(refreshCount, 0)
+        await accessibility.completeScan(
+            1,
+            with: .init(snapshots: [testSnapshot(), testSnapshot(title: "Notion", id: "notion")], errors: [])
+        )
+        let newApplicationPublished = await waitUntil { model.snapshot.all.count == 2 }
+        XCTAssertTrue(newApplicationPublished)
+        XCTAssertTrue(model.snapshot.all.contains { $0.identity.bundleIdentifier == "com.example.notion" })
+    }
+
+    func testBackgroundMonitoringKeepsPeriodicUpdatesLightweightAfterDiscoveryDeadline() async {
+        let clock = LockedPanelClock(testNow)
+        let accessibility = ControlledAccessibility()
+        let scheduler = ManualPanelLiveUpdateScheduler()
+        let controller = CatalogController(
+            store: FakeCatalogStore(), accessibility: accessibility, launcher: FakeLauncher(), now: { clock.value }
+        )
+        let model = HubPanelModel(
+            controller: controller, now: { clock.value }, initialPermissionState: .authorized,
+            liveUpdateScheduler: scheduler
+        )
+
+        model.startBackgroundUpdates()
+        await accessibility.waitForScanRequests(1)
+        await accessibility.completeScan(0, with: .init(snapshots: [testSnapshot()], errors: []))
+        let initialScanFinished = await waitUntil { !controller.isScanning }
+        XCTAssertTrue(initialScanFinished)
+
+        clock.advance(by: 21)
+        let deadline = ContinuousClock.now + .seconds(1)
+        var refreshCount = await accessibility.refreshRequestCount
+        while refreshCount < 1, ContinuousClock.now < deadline {
+            scheduler.fire()
+            await Task.yield()
+            refreshCount = await accessibility.refreshRequestCount
+        }
+        let scanCount = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCount, 1)
+        XCTAssertEqual(refreshCount, 1)
+    }
+
+    func testApplicationLaunchDuringScanQueuesAnotherFullDiscovery() async {
+        let accessibility = ControlledAccessibility()
+        let scheduler = ManualPanelLiveUpdateScheduler()
+        let controller = CatalogController(
+            store: FakeCatalogStore(), accessibility: accessibility, launcher: FakeLauncher()
+        )
+        let model = HubPanelModel(
+            controller: controller, initialPermissionState: .authorized, liveUpdateScheduler: scheduler
+        )
+
+        model.startBackgroundUpdates()
+        await accessibility.waitForScanRequests(1)
+        model.applicationSetDidChange()
+        await accessibility.completeScan(0, with: .init(snapshots: [testSnapshot()], errors: []))
+
+        let deadline = ContinuousClock.now + .seconds(1)
+        var scanCount = await accessibility.scanRequestCount
+        while scanCount < 2, ContinuousClock.now < deadline {
+            await Task.yield()
+            scanCount = await accessibility.scanRequestCount
+        }
+        XCTAssertEqual(scanCount, 2)
         await accessibility.completeScan(1, with: .init(snapshots: [testSnapshot()], errors: []))
+        let secondScanFinished = await waitUntil { !controller.isScanning }
+        XCTAssertTrue(secondScanFinished)
+        await Task.yield()
+        let stableScanCount = await accessibility.scanRequestCount
+        XCTAssertEqual(stableScanCount, 2)
     }
 
     func testTerminationPreparationFlushesDebouncedScanPersistence() async {
