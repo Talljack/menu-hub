@@ -70,7 +70,7 @@ struct HubItemActionPanel: View {
                         .frame(width: 7, height: 7)
                     Text(statusLabel)
                 }
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(.secondary)
                 .accessibilityElement(children: .combine)
             }
@@ -194,7 +194,7 @@ struct HubItemActionPanel: View {
                         .font(.callout.weight(.semibold))
                     Spacer()
                     Text(L("actionPanel.optional"))
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
@@ -281,7 +281,7 @@ struct HubItemActionPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             if let title {
                 Text(title)
-                    .font(.caption2.weight(.semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 10)
             }
@@ -319,19 +319,19 @@ struct HubItemActionPanel: View {
                 }
                 if let keyHint {
                     Text(keyHint)
-                        .font(.caption2.monospaced())
-                        .foregroundStyle(role == .primary ? Color.white.opacity(0.82) : Color.secondary)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(role == .primary ? Color(nsColor: .selectedControlTextColor) : Color.secondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
                         .background(Color.primary.opacity(role == .primary ? 0.14 : 0.07), in: Capsule())
                 }
                 if let trailingSymbol {
                     Image(systemName: trailingSymbol)
-                        .font(.caption2.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 } else if showsChevron {
                     Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -345,7 +345,7 @@ struct HubItemActionPanel: View {
 
     private func keyboardFooter(_ text: String) -> some View {
         Text(text)
-            .font(.caption2)
+            .font(.caption)
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.top, 1)

@@ -61,7 +61,7 @@ Menu Hub 使用 Swift 6、SwiftUI 和 AppKit 开发，只使用 macOS 公开 API
 
 ### 未读消息提醒
 
-开启辅助功能权限和自动扫描后，Menu Hub 会在菜单栏图标内叠加单色未读总数胶囊。状态项始终保持固定宽度，避免新消息把图标挤入刘海或挤出可视区域。面板打开时每秒刷新已知数字，面板关闭时每 5 秒刷新一次。
+开启辅助功能权限和自动扫描后，Menu Hub 会在菜单栏图标内叠加单色未读总数胶囊。状态项始终保持固定宽度，避免新消息把图标挤入刘海或挤出可视区域。面板打开时每秒刷新已知数字；面板关闭且存在未读时每 5 秒刷新；没有未读时自动降为每 20 秒刷新，以减少耗电。
 
 自动模式默认支持飞书/Lark、微信、企业微信、QQ、钉钉、Slack、Microsoft Teams、Telegram、WhatsApp、Discord、Signal、LINE、KakaoTalk、Viber、Zoom Workplace、Mattermost、Zulip 和 Element。只有 macOS 公开辅助功能标题中的准确纯数字才会计入；只有红点、没有数字时按 0 处理。可在 **设置 > 项目与分组** 中选择项目，然后把 **未读提醒** 改为“自动 / 始终计入 / 从不计入”。
 
@@ -130,6 +130,8 @@ xcodebuild test \
 ## CI 发布
 
 每次推送或合并到 `main` 都会运行 [.github/workflows/release.yml](.github/workflows/release.yml)，执行测试、构建两种芯片架构，并上传对应的 DMG 和 ZIP 构件。
+
+打 Tag 前可运行 `./scripts/run-local-validation.sh`，一次完成 SwiftPM、Xcode 单元/集成测试和已签名的 macOS UI 测试。CI 始终编译 UI 测试；在 `ci`/`release` 环境配置 `APPLE_DEVELOPMENT_CERTIFICATE_P12_BASE64`、`APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD`、`APPLE_DEVELOPMENT_SIGNING_IDENTITY` 和 `APPLE_DEVELOPMENT_TEAM_ID` 后，也会实际执行 UI 测试。
 
 `v*` 标签会生成 GitHub Release。受保护的 `release` 环境配置完成后，CI 会导入 Developer ID 证书、签名两个 App、提交 Apple 公证、装订公证票据、验证全部 8 个发布文件，并在批准后公开发布。
 

@@ -41,6 +41,7 @@ struct OnboardingView: View {
             .padding(18)
         }
         .frame(width: 520, height: 390)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("onboarding.root")
         .onReceive(model.$permissionState) { state in
             guard state == .authorized else { return }

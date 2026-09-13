@@ -5,6 +5,103 @@ import XCTest
 
 @MainActor
 final class PanelNavigationTests: XCTestCase {
+    func testSpacerWidthUsesTheStatusItemsDisplayBeforeTheMainDisplay() {
+        XCTAssertEqual(
+            MenuBarScreenGeometry.maximumSafeSpacerWidth(
+                statusItemVisibleWidth: 900,
+                fallbackVisibleWidth: 2_000
+            ),
+            405
+        )
+        XCTAssertEqual(
+            MenuBarScreenGeometry.maximumSafeSpacerWidth(
+                statusItemVisibleWidth: nil,
+                fallbackVisibleWidth: 2_000
+            ),
+            600
+        )
+        XCTAssertEqual(
+            MenuBarScreenGeometry.maximumSafeSpacerWidth(
+                statusItemVisibleWidth: nil,
+                fallbackVisibleWidth: nil
+            ),
+            320
+        )
+    }
+
+    func testInstallationHealthRequiresApplicationsLocationAndStableSigningIdentity() {
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD",
+                developerIDSignatureIsValid: true
+            ).status,
+            .ready
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Users/me/Downloads/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD",
+                developerIDSignatureIsValid: true
+            ).status,
+            .moveToApplications
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: nil,
+                developerIDSignatureIsValid: false
+            ).status,
+            .unsigned
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.example.Imposter",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD",
+                developerIDSignatureIsValid: true
+            ).status,
+            .unsigned
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: "OTHERTEAM",
+                developerIDSignatureIsValid: true
+            ).status,
+            .unsigned
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD",
+                developerIDSignatureIsValid: true
+            ).status,
+            .unsigned
+        )
+        XCTAssertEqual(
+            InstallationHealth.evaluate(
+                bundleURL: URL(fileURLWithPath: "/Applications/Menu Hub.app"),
+                bundleIdentifier: "com.local.MenuHub",
+                version: "0.1.5",
+                signingTeamIdentifier: "636LV693YD",
+                developerIDSignatureIsValid: false
+            ).status,
+            .unsigned
+        )
+    }
+
     func testFailedActionUsesRetryLabelWithoutRemovingOpenHostAction() {
         XCTAssertEqual(HubItemActionLabel.primary(hasFailure: true, isLaunchOnly: false), L("panel.retry"))
         XCTAssertEqual(HubItemActionLabel.primary(hasFailure: false, isLaunchOnly: true), L("panel.openApp"))
@@ -155,6 +252,27 @@ final class PanelNavigationTests: XCTestCase {
         XCTAssertEqual(HubPanelPresentationContext.canonicalPresentationID(itemID: "item", query: " 6 ").rawValue, "search:item")
     }
 
+    func testFavoriteShortcutPresentationUsesAVisibleSectionForEveryLayout() {
+        XCTAssertEqual(
+            HubPanelPresentationContext.favoriteShortcutPresentationID(
+                itemID: "item", query: "", layout: .compact
+            ),
+            HubItemPresentationID(sectionID: "favorites", itemID: "item")
+        )
+        XCTAssertEqual(
+            HubPanelPresentationContext.favoriteShortcutPresentationID(
+                itemID: "item", query: "", layout: .grid
+            ),
+            .canonical(itemID: "item")
+        )
+        XCTAssertEqual(
+            HubPanelPresentationContext.favoriteShortcutPresentationID(
+                itemID: "item", query: "lark", layout: .compact
+            ),
+            HubItemPresentationID(sectionID: "search", itemID: "item")
+        )
+    }
+
     func testKeyboardEventContextProtectsIMEAndModifiedArrows() {
         let router = PanelKeyboardRouter()
         XCTAssertNil(router.command(for: .init(keyCode: 36, characters: "\r", modifiers: [], hasMarkedText: true)))
@@ -163,6 +281,8 @@ final class PanelNavigationTests: XCTestCase {
         XCTAssertNil(router.command(for: .init(keyCode: 125, characters: nil, modifiers: [.option], hasMarkedText: false)))
         XCTAssertEqual(router.command(for: .init(keyCode: 126, characters: nil, modifiers: [], hasMarkedText: false)), .upArrow)
         XCTAssertEqual(router.command(for: .init(keyCode: 40, characters: "k", modifiers: [.command], hasMarkedText: false)), .commandK)
+        XCTAssertEqual(router.command(for: .init(keyCode: 18, characters: "¡", modifiers: [.command], hasMarkedText: false)), .commandDigit(1))
+        XCTAssertEqual(router.command(for: .init(keyCode: 25, characters: nil, modifiers: [.command], hasMarkedText: false)), .commandDigit(9))
     }
 
     func testPanelBackgroundModeNeverStacksMaterialWhenTransparencyIsReduced() {

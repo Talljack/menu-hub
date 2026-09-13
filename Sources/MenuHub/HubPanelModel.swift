@@ -20,10 +20,10 @@ private final class TaskPanelLiveUpdateCancellation: PanelLiveUpdateCancellation
 @MainActor
 private struct SystemPanelLiveUpdateScheduler: PanelLiveUpdateScheduling {
     func schedule(every interval: TimeInterval, action: @escaping @MainActor () -> Void) -> any PanelLiveUpdateCancellation {
-        let nanoseconds = UInt64(max(interval, 0.1) * 1_000_000_000)
+        let delay = Duration.milliseconds(Int64(max(interval, 0.1) * 1_000))
         let task = Task { @MainActor in
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: nanoseconds)
+                try? await Task.sleep(for: delay)
                 guard !Task.isCancelled else { break }
                 action()
             }
@@ -99,10 +99,10 @@ enum PanelMonitoringMode: Equatable {
     case background
     case foreground
 
-    var interval: TimeInterval? {
+    func interval(hasUnreadBadge: Bool) -> TimeInterval? {
         switch self {
         case .stopped: nil
-        case .background: 5
+        case .background: hasUnreadBadge ? 5 : 20
         case .foreground: 1
         }
     }
@@ -163,6 +163,7 @@ final class HubPanelModel: ObservableObject {
     @Published var selectionID: String?
     @Published private(set) var permissionState: PermissionState
     @Published private(set) var operationState: PanelOperationState = .idle
+    @Published private(set) var hasFinishedInitialLoad = true
     @Published private(set) var statusMessageKey: PanelStatusMessageKey?
     @Published var hotKeyAvailable = true
     @Published private(set) var snapshot: PanelSnapshot = .empty
@@ -207,6 +208,7 @@ final class HubPanelModel: ObservableObject {
     private var invocationGeneration = 0
     private var invocationTask: Task<Void, Never>?
     private var liveUpdateCancellation: (any PanelLiveUpdateCancellation)?
+    private var scheduledLiveUpdateInterval: TimeInterval?
     private(set) var monitoringMode: PanelMonitoringMode = .stopped
     private var liveUpdatesActive: Bool { monitoringMode != .stopped }
     private var liveScanGeneration = 0
@@ -240,13 +242,15 @@ final class HubPanelModel: ObservableObject {
         liveUpdateScheduler = SystemPanelLiveUpdateScheduler()
         accessibilityTrustProvider = { AccessibilityClient.isTrusted() }
         runningUserApplicationBundleIdentifiers = { HostApplicationResolver.runningUserApplicationBundleIdentifiers() }
-        failureFeedbackDuration = .seconds(3)
+        failureFeedbackDuration = .seconds(30)
         permissionState = AccessibilityClient.isTrusted() ? .authorized : .unknown
+        hasFinishedInitialLoad = false
         observeController()
         operationState = .loading
         Task { [weak self] in
             await self?.controller.load()
             guard let self else { return }
+            hasFinishedInitialLoad = true
             if operationState == .loading { operationState = .idle }
             rebuildSnapshot()
             if liveUpdatesActive, controller.document.preferences.automaticScanning, permissionGranted,
@@ -265,7 +269,8 @@ final class HubPanelModel: ObservableObject {
         liveUpdateScheduler: any PanelLiveUpdateScheduling = SystemPanelLiveUpdateScheduler(),
         accessibilityTrustProvider: @escaping @MainActor () -> Bool = { true },
         runningUserApplicationBundleIdentifiers: (@MainActor () -> Set<String>)? = nil,
-        failureFeedbackDuration: Duration = .seconds(3)
+        failureFeedbackDuration: Duration = .seconds(3),
+        loadsController: Bool = false
     ) {
         self.controller = controller
         self.now = now
@@ -275,8 +280,25 @@ final class HubPanelModel: ObservableObject {
         self.accessibilityTrustProvider = accessibilityTrustProvider
         self.runningUserApplicationBundleIdentifiers = runningUserApplicationBundleIdentifiers
         self.failureFeedbackDuration = failureFeedbackDuration
+        self.hasFinishedInitialLoad = !loadsController
         observeController()
-        rebuildSnapshot()
+        if loadsController {
+            operationState = .loading
+            Task { [weak self] in
+                await self?.controller.load()
+                guard let self else { return }
+                hasFinishedInitialLoad = true
+                if operationState == .loading { operationState = .idle }
+                rebuildSnapshot()
+                if liveUpdatesActive, controller.document.preferences.automaticScanning, permissionGranted,
+                   inFlightLiveScanTask == nil, !controller.isScanning {
+                    startLiveScan(fullDiscovery: true)
+                    scheduleLiveUpdatesIfNeeded()
+                }
+            }
+        } else {
+            rebuildSnapshot()
+        }
     }
 
     var filteredItems: [HubPanelItem] {
@@ -287,8 +309,9 @@ final class HubPanelModel: ObservableObject {
 
     var recentItems: [HubPanelItem] {
         let recent = Set(snapshot.recent.map(\.id))
+        let rank = Dictionary(uniqueKeysWithValues: recentIDs.enumerated().map { ($0.element, $0.offset) })
         return items.filter { recent.contains($0.id) }.sorted {
-            (recentIDs.firstIndex(of: $0.id) ?? .max) < (recentIDs.firstIndex(of: $1.id) ?? .max)
+            (rank[$0.id] ?? .max) < (rank[$1.id] ?? .max)
         }
     }
 
@@ -301,6 +324,7 @@ final class HubPanelModel: ObservableObject {
     func startLiveUpdates() {
         stopLiveUpdates()
         monitoringMode = .foreground
+        guard operationState != .loading else { return }
         guard controller.document.preferences.automaticScanning else { return }
         let wasAuthorized = permissionGranted
         guard revalidateAccessibilityTrust(), wasAuthorized else { return }
@@ -312,6 +336,7 @@ final class HubPanelModel: ObservableObject {
         monitoringMode = .stopped
         liveUpdateCancellation?.cancel()
         liveUpdateCancellation = nil
+        scheduledLiveUpdateInterval = nil
         liveScanGeneration += 1
         inFlightLiveScanTask?.cancel()
         inFlightLiveScanTask = nil
@@ -325,6 +350,7 @@ final class HubPanelModel: ObservableObject {
             return
         }
         monitoringMode = .background
+        guard operationState != .loading else { return }
         guard controller.document.preferences.automaticScanning else {
             unreadBadgePresentation = .hidden
             return
@@ -365,6 +391,7 @@ final class HubPanelModel: ObservableObject {
         guard mode != monitoringMode else { return }
         liveUpdateCancellation?.cancel()
         liveUpdateCancellation = nil
+        scheduledLiveUpdateInterval = nil
         monitoringMode = mode
         if mode == .stopped {
             unreadBadgePresentation = .hidden
@@ -374,21 +401,27 @@ final class HubPanelModel: ObservableObject {
     }
 
     private func scheduleLiveUpdatesIfNeeded() {
-        guard liveUpdatesActive, permissionGranted, liveUpdateCancellation == nil,
+        guard operationState != .loading, liveUpdatesActive, permissionGranted,
               lastAutomaticScanningPreference ?? controller.document.preferences.automaticScanning,
-              let interval = monitoringMode.interval else { return }
+              let interval = monitoringMode.interval(hasUnreadBadge: unreadBadgePresentation != .hidden) else { return }
+        if liveUpdateCancellation != nil, scheduledLiveUpdateInterval == interval { return }
+        liveUpdateCancellation?.cancel()
+        liveUpdateCancellation = nil
+        scheduledLiveUpdateInterval = nil
         liveUpdateCancellation = liveUpdateScheduler.schedule(every: interval) { [weak self] in
-            guard let self, self.liveUpdatesActive, self.permissionGranted,
+            guard let self, self.operationState != .loading,
+                  self.liveUpdatesActive, self.permissionGranted,
                   self.inFlightLiveScanTask == nil && !self.controller.isScanning else { return }
             if case .invoking = self.operationState { return }
             let fullDiscovery = self.monitoringMode == .foreground
                 && (self.nextFullDiscoveryAt.map { self.now() >= $0 } ?? true)
             self.startLiveScan(fullDiscovery: fullDiscovery)
         }
+        scheduledLiveUpdateInterval = interval
     }
 
     private func startLiveScan(fullDiscovery: Bool) {
-        guard liveUpdatesActive, revalidateAccessibilityTrust() else { return }
+        guard operationState != .loading, liveUpdatesActive, revalidateAccessibilityTrust() else { return }
         if fullDiscovery { nextFullDiscoveryAt = now().addingTimeInterval(20) }
         liveScanGeneration += 1
         let generation = liveScanGeneration
@@ -410,7 +443,7 @@ final class HubPanelModel: ObservableObject {
     }
 
     private func startScan() {
-        guard revalidateAccessibilityTrust() else { return }
+        guard hasFinishedInitialLoad, revalidateAccessibilityTrust() else { return }
         manualScanGeneration += 1
         let generation = manualScanGeneration
         manualScanTask?.cancel()
@@ -441,19 +474,33 @@ final class HubPanelModel: ObservableObject {
         applyPermissionEvent(.openedSettings)
     }
 
-    func invoke(_ item: HubPanelItem) {
+    func invoke(_ item: HubPanelItem, presentationID: HubItemPresentationID? = nil) {
+        let recoveryPresentationID = presentationID
+            ?? HubPanelPresentationContext.canonicalPresentationID(itemID: item.id, query: query)
         if !item.isLaunchOnly, !revalidateAccessibilityTrust() {
             guard controller.canLaunchHost(for: item.record) else {
                 statusMessageKey = .permissionDenied
                 return
             }
-            beginInvocation(itemID: item.id, forceLaunchHost: true)
+            beginInvocation(
+                itemID: item.id,
+                forceLaunchHost: true,
+                recoveryPresentationID: recoveryPresentationID
+            )
             return
         }
-        beginInvocation(itemID: item.id, forceLaunchHost: item.isLaunchOnly)
+        beginInvocation(
+            itemID: item.id,
+            forceLaunchHost: item.isLaunchOnly,
+            recoveryPresentationID: recoveryPresentationID
+        )
     }
 
-    private func beginInvocation(itemID: String, forceLaunchHost: Bool) {
+    private func beginInvocation(
+        itemID: String,
+        forceLaunchHost: Bool,
+        recoveryPresentationID: HubItemPresentationID
+    ) {
         suspendLiveScanningForInvocation()
         invocationTask?.cancel()
         invocationGeneration += 1
@@ -471,8 +518,16 @@ final class HubPanelModel: ObservableObject {
             operationState = controller.isScanning ? .scanning : .idle
             switch outcome {
             case .pressed, .openedHost: publishSuccess(for: itemID)
-            case .failed(let failure): publishFailure(Self.messageKey(for: failure), itemID: itemID, generation: generation)
-            case .unavailable: publishFailure(.unavailable, itemID: itemID, generation: generation)
+            case .failed(let failure):
+                publishFailure(
+                    Self.messageKey(for: failure), itemID: itemID,
+                    presentationID: recoveryPresentationID, generation: generation
+                )
+            case .unavailable:
+                publishFailure(
+                    .unavailable, itemID: itemID,
+                    presentationID: recoveryPresentationID, generation: generation
+                )
             }
             resumeMonitoringAfterInvocation()
         }
@@ -480,7 +535,11 @@ final class HubPanelModel: ObservableObject {
 
     func invokeSelection(forceLaunchHost: Bool) {
         guard let selectionID, let item = items.first(where: { $0.id == selectionID }), item.canInvoke else { return }
-        if !forceLaunchHost { invoke(item); return }
+        let recoveryPresentationID = HubPanelPresentationContext.canonicalPresentationID(
+            itemID: item.id,
+            query: query
+        )
+        if !forceLaunchHost { invoke(item, presentationID: recoveryPresentationID); return }
         suspendLiveScanningForInvocation()
         invocationTask?.cancel()
         invocationGeneration += 1
@@ -496,16 +555,43 @@ final class HubPanelModel: ObservableObject {
             operationState = controller.isScanning ? .scanning : .idle
             switch outcome {
             case .pressed, .openedHost: publishSuccess(for: item.id)
-            case .failed(let failure): publishFailure(Self.messageKey(for: failure), itemID: item.id, generation: generation)
-            case .unavailable: publishFailure(.unavailable, itemID: item.id, generation: generation)
+            case .failed(let failure):
+                publishFailure(
+                    Self.messageKey(for: failure), itemID: item.id,
+                    presentationID: recoveryPresentationID, generation: generation
+                )
+            case .unavailable:
+                publishFailure(
+                    .unavailable, itemID: item.id,
+                    presentationID: recoveryPresentationID, generation: generation
+                )
             }
             resumeMonitoringAfterInvocation()
         }
     }
 
-    func openHost(_ item: HubPanelItem) {
+    func invokeFavorite(at index: Int) {
+        guard snapshot.favorites.indices.contains(index),
+              let item = items.first(where: { $0.id == snapshot.favorites[index].id }) else { return }
         selectionID = item.id
-        invokeSelection(forceLaunchHost: true)
+        invoke(
+            item,
+            presentationID: HubPanelPresentationContext.favoriteShortcutPresentationID(
+                itemID: item.id,
+                query: query,
+                layout: controller.document.preferences.layout
+            )
+        )
+    }
+
+    func openHost(_ item: HubPanelItem, presentationID: HubItemPresentationID? = nil) {
+        selectionID = item.id
+        beginInvocation(
+            itemID: item.id,
+            forceLaunchHost: true,
+            recoveryPresentationID: presentationID
+                ?? HubPanelPresentationContext.canonicalPresentationID(itemID: item.id, query: query)
+        )
     }
 
     func toggleFavorite(_ item: HubPanelItem) {
@@ -552,15 +638,21 @@ final class HubPanelModel: ObservableObject {
         lastSucceededItemID = itemID
         successFeedbackTask?.cancel()
         successFeedbackTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 900_000_000)
+            try? await Task.sleep(for: .milliseconds(900))
             guard !Task.isCancelled, self?.lastSucceededItemID == itemID else { return }
             self?.lastSucceededItemID = nil
         }
     }
 
-    private func publishFailure(_ message: PanelStatusMessageKey, itemID: String, generation: Int) {
+    private func publishFailure(
+        _ message: PanelStatusMessageKey,
+        itemID: String,
+        presentationID: HubItemPresentationID,
+        generation: Int
+    ) {
         statusMessageKey = message
         lastFailedItemID = itemID
+        actionMenuPresentationID = presentationID
         failureFeedbackTask?.cancel()
         let duration = failureFeedbackDuration
         failureFeedbackTask = Task { [weak self] in
@@ -568,6 +660,7 @@ final class HubPanelModel: ObservableObject {
             guard let self, !Task.isCancelled, generation == invocationGeneration,
                   lastFailedItemID == itemID else { return }
             lastFailedItemID = nil
+            if actionMenuPresentationID == presentationID { actionMenuPresentationID = nil }
             if statusMessageKey == message { statusMessageKey = nil }
             controller.clearActionFailure()
         }
@@ -632,6 +725,7 @@ final class HubPanelModel: ObservableObject {
     private func cancelAllAccessibilityWork() {
         liveUpdateCancellation?.cancel()
         liveUpdateCancellation = nil
+        scheduledLiveUpdateInterval = nil
         liveScanGeneration += 1
         inFlightLiveScanTask?.cancel()
         inFlightLiveScanTask = nil
@@ -684,7 +778,7 @@ final class HubPanelModel: ObservableObject {
         controller.$document.combineLatest(controller.$runtimeSnapshots)
             .sink { [weak self] document, runtimeSnapshots in
                 guard let self else { return }
-                self.rebuildSnapshot()
+                self.rebuildSnapshot(document: document, runtimeSnapshots: runtimeSnapshots)
                 self.rebuildUnreadBadge(document: document, runtimeSnapshots: runtimeSnapshots)
                 let enabled = document.preferences.automaticScanning
                 guard self.lastAutomaticScanningPreference != enabled else { return }
@@ -729,6 +823,7 @@ final class HubPanelModel: ObservableObject {
             unreadBadgePresentation = .hidden
             liveUpdateCancellation?.cancel()
             liveUpdateCancellation = nil
+            scheduledLiveUpdateInterval = nil
             liveScanGeneration += 1
             inFlightLiveScanTask?.cancel()
             inFlightLiveScanTask = nil
@@ -747,14 +842,20 @@ final class HubPanelModel: ObservableObject {
             unreadBadgePresentation = .hidden
             return
         }
+        let previous = unreadBadgePresentation
         unreadBadgePresentation = UnreadBadgeAggregator.presentation(
             records: document.items,
             snapshots: runtimeSnapshots ?? controller.runtimeSnapshots
         )
+        if unreadBadgePresentation != previous { scheduleLiveUpdatesIfNeeded() }
     }
 
-    private func rebuildSnapshot() {
-        let document = controller.document
+    private func rebuildSnapshot(
+        document: CatalogDocument? = nil,
+        runtimeSnapshots: [String: AccessibilitySnapshot]? = nil
+    ) {
+        let document = document ?? controller.document
+        let runtimeSnapshots = runtimeSnapshots ?? controller.runtimeSnapshots
         var available = document.items.filter { !$0.isIgnored }.sorted(by: Self.itemOrder)
         if let runningUserApplicationBundleIdentifiers {
             let running = runningUserApplicationBundleIdentifiers()
@@ -771,7 +872,7 @@ final class HubPanelModel: ObservableObject {
         }
         let visible: [MenuBarItemRecord]
         if permissionState == .authorized, controller.hasCompletedScan {
-            let runningItemIDs = Set(controller.runtimeSnapshots.keys)
+            let runningItemIDs = Set(runtimeSnapshots.keys)
             visible = available.filter { runningItemIDs.contains($0.id) }
         } else {
             visible = available
@@ -789,7 +890,7 @@ final class HubPanelModel: ObservableObject {
         )
         recentIDs = snapshot.recent.map(\.id)
         items = visible.map { record in
-            let runtime = controller.runtimeSnapshots[record.id]
+            let runtime = runtimeSnapshots[record.id]
             let effectiveLauncher = controller.canLaunchHost(for: record)
                 && (isLauncherMode || runtime == nil || record.capability == .launchOnly)
             return HubPanelItem(

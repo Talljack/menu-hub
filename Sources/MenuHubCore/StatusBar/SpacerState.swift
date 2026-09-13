@@ -10,7 +10,7 @@ public struct SpacerState: Equatable, Sendable {
     public private(set) var currentWidth: Double
     public let safeWidth: Double
     public let requestedHiddenWidth: Double
-    public let maximumSafeWidth: Double
+    public private(set) var maximumSafeWidth: Double
     public let shouldRestoreHiddenPreference: Bool
 
     public static func startup(
@@ -50,6 +50,13 @@ public struct SpacerState: Equatable, Sendable {
     public mutating func hideItems() {
         visibility = .hidden
         currentWidth = min(requestedHiddenWidth, maximumSafeWidth)
+    }
+
+    public mutating func updateMaximumSafeWidth(_ width: Double) {
+        maximumSafeWidth = max(safeWidth, width)
+        if visibility == .hidden {
+            currentWidth = min(requestedHiddenWidth, maximumSafeWidth)
+        }
     }
 
     public mutating func revealForSafety() {

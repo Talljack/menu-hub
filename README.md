@@ -61,7 +61,7 @@ Repair Permission resets only Menu Hub's own `com.local.MenuHub` Accessibility e
 
 ### Unread message badge
 
-When Accessibility permission and automatic scanning are enabled, Menu Hub overlays a monochrome unread-total capsule inside its menu bar icon. The status item keeps a constant width so new messages do not push it into the notch or out of the visible area. It refreshes known numeric titles every second while the panel is open and every five seconds while closed.
+When Accessibility permission and automatic scanning are enabled, Menu Hub overlays a monochrome unread-total capsule inside its menu bar icon. The status item keeps a constant width so new messages do not push it into the notch or out of the visible area. It refreshes known numeric titles every second while the panel is open, every five seconds while an unread badge is visible, and every 20 seconds while closed with no unread count.
 
 Automatic mode includes Feishu/Lark, WeChat, WeCom, QQ, DingTalk, Slack, Microsoft Teams, Telegram, WhatsApp, Discord, Signal, LINE, KakaoTalk, Viber, Zoom Workplace, Mattermost, Zulip, and Element. Menu Hub counts only an exact numeric title exposed by macOS; a dot or other presence-only indicator contributes zero. Open **Settings > Items & Groups**, select an item, and choose **Unread Badge > Automatic / Always Include / Never Include** to override it locally.
 
@@ -134,6 +134,8 @@ The root `VERSION` file is the version source of truth and must match `MARKETING
 ## CI releases
 
 Every push or merge to `main` runs [.github/workflows/release.yml](.github/workflows/release.yml), tests the project, builds both chip architectures, and uploads architecture-specific DMG and ZIP artifacts.
+
+Run `./scripts/run-local-validation.sh` before tagging to execute SwiftPM tests, Xcode unit/integration tests, and the signed macOS UI suite. CI always compiles that UI suite. It also executes it when the `ci`/`release` environment provides `APPLE_DEVELOPMENT_CERTIFICATE_P12_BASE64`, `APPLE_DEVELOPMENT_CERTIFICATE_PASSWORD`, `APPLE_DEVELOPMENT_SIGNING_IDENTITY`, and `APPLE_DEVELOPMENT_TEAM_ID`.
 
 A `v*` tag produces a GitHub Release. With the protected `release` environment configured, CI imports the Developer ID certificate, signs both apps, submits them to Apple's notary service, staples the tickets, validates all eight release assets, and publishes the release after approval.
 

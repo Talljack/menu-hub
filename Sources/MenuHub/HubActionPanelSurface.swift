@@ -44,6 +44,7 @@ enum HubItemActionPanelCommand: Hashable {
 struct HubActionPanelSurface: ViewModifier {
     private let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     func body(content: Content) -> some View {
         let supportsLiquidGlass: Bool = if #available(macOS 26.0, *) { true } else { false }
@@ -66,7 +67,12 @@ struct HubActionPanelSurface: ViewModifier {
         case .material:
             content
                 .background(.regularMaterial, in: shape)
-                .overlay(shape.stroke(.white.opacity(0.14), lineWidth: 0.75))
+                .overlay(
+                    shape.stroke(
+                        Color(nsColor: .separatorColor),
+                        lineWidth: colorSchemeContrast == .increased ? 1.5 : 0.75
+                    )
+                )
         case .liquidGlass:
 #if compiler(>=6.3)
             if #available(macOS 26.0, *) {

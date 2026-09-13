@@ -12,6 +12,7 @@ struct UITestRuntime {
     let appearance: AppearancePreference
     let layout: LayoutPreference
     let showsOnboarding: Bool
+    let keepsOpenOnFocusLoss: Bool
     let resetFixture: Bool
     let actionFailure: AccessibilityDomainError?
     let directory: URL
@@ -37,6 +38,7 @@ struct UITestRuntime {
             appearance: appearance,
             layout: layout,
             showsOnboarding: value(after: "-showOnboarding", in: arguments) == "1",
+            keepsOpenOnFocusLoss: value(after: "-uiTestKeepOpenOnFocusLoss", in: arguments) == "1",
             resetFixture: value(after: "-resetFixture", in: arguments) == "1",
             actionFailure: value(after: "-uiTestActionFailure", in: arguments)
                 .flatMap(AccessibilityDomainError.init(rawValue:)),
@@ -48,7 +50,12 @@ struct UITestRuntime {
 
     @MainActor
     func makeModel() -> HubPanelModel {
-        let fixture = Self.fixture(named: catalogName, language: language, layout: layout)
+        let fixture = Self.fixture(
+            named: catalogName,
+            language: language,
+            layout: layout,
+            keepsOpenOnFocusLoss: keepsOpenOnFocusLoss
+        )
         let store = UITestCatalogStore(directory: directory, seed: fixture.document, reset: resetFixture)
         let controller = CatalogController(
             store: store,
@@ -61,9 +68,9 @@ struct UITestRuntime {
             controller: controller,
             initialPermissionState: permissionState,
             permissionEffectHandler: UITestPermissionEffects(),
-            accessibilityTrustProvider: { trusted }
+            accessibilityTrustProvider: { trusted },
+            loadsController: true
         )
-        Task { await controller.load() }
         return model
     }
 
@@ -75,7 +82,8 @@ struct UITestRuntime {
     private static func fixture(
         named name: String,
         language: LanguagePreference,
-        layout: LayoutPreference
+        layout: LayoutPreference,
+        keepsOpenOnFocusLoss: Bool
     ) -> (document: CatalogDocument, scanResult: AccessibilityScanResult) {
         if name == "empty" { return (.empty, .init(snapshots: [], issues: [])) }
         if name == "error" {
@@ -85,7 +93,7 @@ struct UITestRuntime {
         let host = language == .simplifiedChinese ? "飞书" : "Lark"
         if name == "launcher-only" {
             let item = record(id: "launcher", host: "Example Launcher", title: "Example Launcher", bundle: "com.example.launcher", capability: .launchOnly, order: 0)
-            return (CatalogDocument(items: [item], groups: [], preferences: preferences(language, layout: layout)), .init(snapshots: [], issues: []))
+            return (CatalogDocument(items: [item], groups: [], preferences: preferences(language, layout: layout, keepsOpenOnFocusLoss: keepsOpenOnFocusLoss)), .init(snapshots: [], issues: []))
         }
 
         let lark = record(id: "lark", host: host, title: "6", bundle: "com.larksuite.mac", capability: .full, favorite: true, order: 0)
@@ -93,16 +101,24 @@ struct UITestRuntime {
         let unavailable = record(id: "unavailable", host: "Example Utility", title: "Status", bundle: "com.example.utility", capability: .unavailable, order: 2)
         let snapshots = [snapshot(for: lark), snapshot(for: wechat)]
         return (
-            CatalogDocument(items: [lark, wechat, unavailable], groups: [], preferences: preferences(language, layout: layout)),
+            CatalogDocument(items: [lark, wechat, unavailable], groups: [], preferences: preferences(language, layout: layout, keepsOpenOnFocusLoss: keepsOpenOnFocusLoss)),
             .init(snapshots: snapshots, issues: [])
         )
     }
 
-    private static func preferences(_ language: LanguagePreference, layout: LayoutPreference) -> Preferences {
+    private static func preferences(
+        _ language: LanguagePreference,
+        layout: LayoutPreference,
+        keepsOpenOnFocusLoss: Bool
+    ) -> Preferences {
         var value = Preferences.default
         value.language = language
         value.layout = layout
         value.automaticScanning = true
+        // Switching to the ASCII input source is required for deterministic
+        // text entry on localized developer machines. Keep the fixture popover
+        // open while that system-level focus transition occurs.
+        value.closeOnFocusLoss = !keepsOpenOnFocusLoss
         value.closeAfterSuccessfulTrigger = false
         return value
     }

@@ -50,7 +50,6 @@ struct HubPanelView: View {
             Divider()
             contentScroller
             if let message = model.statusMessage,
-               !model.items.isEmpty,
                model.statusMessageKey != .permissionDenied {
                 Divider()
                 statusBar(message)
@@ -183,8 +182,8 @@ struct HubPanelView: View {
                             isMember: item.record.groupIDs.contains(group.id)
                         )
                     },
-                    action: { model.selectionID = item.id; model.invoke(item) },
-                    openHost: { model.openHost(item) },
+                    action: { model.selectionID = item.id; model.invoke(item, presentationID: presentationID) },
+                    openHost: { model.openHost(item, presentationID: presentationID) },
                     toggleFavorite: { model.toggleFavorite(item) },
                     saveAlias: { alias in Task { await model.setAlias(alias, for: item) } },
                     setMembership: { groupID, member in
@@ -244,8 +243,8 @@ struct HubPanelView: View {
                                     isMember: item.record.groupIDs.contains(group.id)
                                 )
                             },
-                            action: { model.selectionID = item.id; model.invoke(item) },
-                            openHost: { model.openHost(item) },
+                            action: { model.selectionID = item.id; model.invoke(item, presentationID: presentationID) },
+                            openHost: { model.openHost(item, presentationID: presentationID) },
                             toggleFavorite: { model.toggleFavorite(item) },
                             saveAlias: { alias in Task { await model.setAlias(alias, for: item) } },
                             setMembership: { groupID, member in
@@ -269,7 +268,7 @@ struct HubPanelView: View {
         VStack(alignment: .leading, spacing: 6) {
             Label(L("panel.permissionTitle"), systemImage: "hand.raised.fill").font(.headline)
             Text(L("panel.permissionBody"))
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
             HStack {
                 Button(permissionButtonTitle) { handlePermissionPrimaryAction() }
                     .buttonStyle(.borderedProminent).disabled(permissionButtonDisabled)
@@ -304,14 +303,23 @@ struct HubPanelView: View {
             Button { model.openSettings() } label: { Label(L("panel.settings"), systemImage: "gearshape") }
                 .buttonStyle(.borderless).help(L("panel.settingsHelp")).accessibilityLabel(L("panel.settingsHelp"))
             Spacer()
-            if model.lastRefreshAt != nil, !model.isScanning {
-                Image(systemName: "checkmark.circle.fill")
+            if let lastRefreshAt = model.lastRefreshAt, !model.isScanning {
+                Label {
+                    Text(lastRefreshAt, style: .relative)
+                } icon: {
+                    Image(systemName: "checkmark.circle.fill")
+                }
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .help(L("panel.updatedNow"))
-                    .accessibilityLabel(L("panel.updatedNow"))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(lastRefreshAt, style: .relative))
             }
             if model.hotKeyAvailable {
-                Text("⌥M")
+                Text(ShortcutRecorderPolicy.label(
+                    keyCode: model.catalogController.document.preferences.hotKey.keyCode,
+                    modifiers: model.catalogController.document.preferences.hotKey.modifiers
+                ))
                     .font(.caption.monospaced())
                     .foregroundStyle(.tertiary)
                     .help(L("panel.footerHotKey"))
@@ -367,6 +375,9 @@ struct HubPanelView: View {
     }
 
     private func handleKeyEvent(_ event: NSEvent) -> Bool {
+        // Let the nested action popover own Return, arrows, and layered Escape.
+        // Handling these in the parent would close or move the main panel instead.
+        guard model.actionMenuPresentationID == nil else { return false }
         let router = PanelKeyboardRouter()
         guard let command = router.command(for: event) else { return false }
         switch router.action(for: command, hasSearchText: !model.query.isEmpty) {
@@ -389,10 +400,7 @@ struct HubPanelView: View {
     }
 
     private func invokeFavorite(_ index: Int) {
-        guard model.snapshot.favorites.indices.contains(index),
-              let item = model.items.first(where: { $0.id == model.snapshot.favorites[index].id }) else { return }
-        model.selectionID = item.id
-        model.invoke(item)
+        model.invokeFavorite(at: index)
     }
 
 }
@@ -405,6 +413,7 @@ private struct PanelKeyboardMonitor: NSViewRepresentable {
     final class MonitoringView: NSView {
         var handler: ((NSEvent) -> Bool)?
         private var monitor: Any?
+
         override func viewWillMove(toWindow newWindow: NSWindow?) {
             if newWindow == nil, let monitor {
                 NSEvent.removeMonitor(monitor)

@@ -4,6 +4,131 @@ import XCTest
 
 @MainActor
 final class HubPanelModelTests: XCTestCase {
+    func testLiveUpdatesWaitForInitialCatalogLoadAndPreserveFavorites() async {
+        let store = FakeCatalogStore(controlLoads: true)
+        let accessibility = ControlledAccessibility()
+        let scheduler = ManualPanelLiveUpdateScheduler()
+        let controller = CatalogController(
+            store: store,
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        let model = HubPanelModel(
+            controller: controller,
+            initialPermissionState: .authorized,
+            liveUpdateScheduler: scheduler,
+            loadsController: true
+        )
+
+        model.startLiveUpdates()
+        await store.waitForLoadRequests(1)
+        XCTAssertEqual(model.operationState, .loading)
+        let scanCountBeforeLoad = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCountBeforeLoad, 0)
+
+        var document = testDocument()
+        document.items[0].isFavorite = true
+        await store.completeLoad(0, with: document)
+        await accessibility.waitForScanRequests(1)
+        let scanStarted = await waitUntil { model.operationState == .scanning }
+        XCTAssertTrue(scanStarted)
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        await accessibility.completeScan(0, with: .init(snapshots: [testSnapshot()], errors: []))
+        let scanCompleted = await waitUntil {
+            controller.hasCompletedScan
+                && model.operationState == .idle
+                && model.snapshot.favorites.map(\.id) == ["item"]
+        }
+
+        XCTAssertTrue(scanCompleted)
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        model.stopLiveUpdates()
+    }
+
+    func testBackgroundMonitoringAndPanelAppearanceCannotRaceInitialCatalogLoad() async {
+        let store = FakeCatalogStore(controlLoads: true)
+        let accessibility = ControlledAccessibility()
+        let scheduler = ManualPanelLiveUpdateScheduler()
+        let controller = CatalogController(
+            store: store,
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        let model = HubPanelModel(
+            controller: controller,
+            initialPermissionState: .authorized,
+            liveUpdateScheduler: scheduler,
+            loadsController: true
+        )
+
+        model.startBackgroundUpdates()
+        model.panelDidAppear()
+        await store.waitForLoadRequests(1)
+
+        XCTAssertEqual(model.operationState, .loading)
+        XCTAssertEqual(scheduler.scheduledCount, 0)
+        scheduler.fire()
+        let scanCountWhileLoading = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCountWhileLoading, 0)
+
+        var document = testDocument()
+        document.items[0].isFavorite = true
+        await store.completeLoad(0, with: document)
+        await accessibility.waitForScanRequests(1)
+
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        XCTAssertEqual(scheduler.scheduledCount, 1)
+        await accessibility.completeScan(0, with: .init(snapshots: [testSnapshot()], errors: []))
+        let completed = await waitUntil { controller.hasCompletedScan && model.operationState == .idle }
+        XCTAssertTrue(completed)
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        model.stopLiveUpdates()
+    }
+
+    func testManualRefreshCannotRaceInitialCatalogLoad() async {
+        let store = FakeCatalogStore(controlLoads: true)
+        let accessibility = ControlledAccessibility()
+        let controller = CatalogController(
+            store: store,
+            accessibility: accessibility,
+            launcher: FakeLauncher(),
+            now: { testNow }
+        )
+        let model = HubPanelModel(
+            controller: controller,
+            initialPermissionState: .authorized,
+            loadsController: true
+        )
+
+        await store.waitForLoadRequests(1)
+        model.refresh()
+        await Task.yield()
+
+        let scanCountWhileLoading = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCountWhileLoading, 0)
+        XCTAssertFalse(model.hasFinishedInitialLoad)
+
+        var document = testDocument()
+        document.items[0].isFavorite = true
+        await store.completeLoad(0, with: document)
+        let loaded = await waitUntil { model.hasFinishedInitialLoad }
+
+        XCTAssertTrue(loaded)
+        XCTAssertEqual(controller.document.items.map(\.id), ["item"])
+        XCTAssertEqual(model.snapshot.favorites.map(\.id), ["item"])
+        let scanCountAfterLoad = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCountAfterLoad, 0)
+    }
+
+    func testMonitoringCadenceKeepsForegroundFreshAndBacksOffWithoutUnreadItems() {
+        XCTAssertEqual(PanelMonitoringMode.foreground.interval(hasUnreadBadge: false), 1)
+        XCTAssertEqual(PanelMonitoringMode.background.interval(hasUnreadBadge: true), 5)
+        XCTAssertEqual(PanelMonitoringMode.background.interval(hasUnreadBadge: false), 20)
+        XCTAssertNil(PanelMonitoringMode.stopped.interval(hasUnreadBadge: true))
+    }
+
     func testPanelSnapshotProjectsEverySectionAndSearch() async {
         let group = GroupRecord(name: "Work")
         let document = panelDocument(group: group)
@@ -303,7 +428,7 @@ final class HubPanelModelTests: XCTestCase {
         await accessibility.completeScan(0, with: .init(snapshots: [initial], errors: []))
         let initialBadgePublished = await waitUntil { model.unreadBadgePresentation == .count(2) }
         XCTAssertTrue(initialBadgePublished)
-        XCTAssertEqual(scheduler.intervals, [5])
+        XCTAssertEqual(scheduler.intervals, [20, 5])
 
         await accessibility.setRefreshResult(.init(snapshots: [unreadSnapshot(title: "6")], errors: []))
         let deadline = ContinuousClock.now + .seconds(1)
@@ -337,7 +462,7 @@ final class HubPanelModelTests: XCTestCase {
         model.panelDidAppear()
         model.panelDidDisappear()
 
-        XCTAssertEqual(scheduler.intervals, [5, 1, 5])
+        XCTAssertEqual(scheduler.intervals, [20, 1, 20])
         let scanCount = await accessibility.scanRequestCount
         XCTAssertEqual(scanCount, 1)
     }
@@ -508,11 +633,13 @@ final class HubPanelModelTests: XCTestCase {
         await scan.value
         let model = HubPanelModel(controller: controller, initialPermissionState: .authorized)
 
-        model.invoke(model.items[0])
+        let sourcePresentationID = HubItemPresentationID(sectionID: "favorites", itemID: "item")
+        model.invoke(model.items[0], presentationID: sourcePresentationID)
         let failed = await waitUntil { model.lastFailedItemID == "item" }
 
         XCTAssertTrue(failed)
         XCTAssertEqual(model.statusMessageKey, .targetUnresponsive)
+        XCTAssertEqual(model.actionMenuPresentationID, sourcePresentationID)
         model.invoke(model.items[0])
         XCTAssertNil(model.lastFailedItemID)
     }
@@ -542,6 +669,7 @@ final class HubPanelModelTests: XCTestCase {
         XCTAssertNil(model.lastFailedItemID)
         XCTAssertNil(model.statusMessageKey)
         XCTAssertNil(controller.errors.actionFailure)
+        XCTAssertNil(model.actionMenuPresentationID)
     }
 
     func testSuccessfulInvocationShowsRowFeedbackWhenClosePreferenceIsOff() async {

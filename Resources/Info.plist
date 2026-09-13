@@ -27,6 +27,6 @@
 	<key>NSAccessibilityUsageDescription</key>
 	<string>Menu Hub reads accessible menu bar item names and performs a press only when you explicitly choose an item. Data stays on this Mac.</string>
 	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
+	<string>MenuHub.MenuHubApplication</string>
 </dict>
 </plist>

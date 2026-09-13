@@ -114,6 +114,20 @@ final class ManagementSettingsTests: XCTestCase {
         XCTAssertEqual(persisted?.items[0].unreadBadgePreference, .include)
     }
 
+    func testSettingsExportPropagatesFileWriteFailures() {
+        let expected = CocoaError(.fileWriteNoPermission)
+        let exporter = SettingsExportService(
+            encode: { _ in Data("menu-hub".utf8) },
+            write: { _, _ in throw expected }
+        )
+
+        XCTAssertThrowsError(
+            try exporter.export(.empty, to: URL(fileURLWithPath: "/unwritable/export.json"))
+        ) { error in
+            XCTAssertEqual((error as? CocoaError)?.code, expected.code)
+        }
+    }
+
     private func makeRecord(id: String, host: String, original: String, alias: String?, bundle: String) -> MenuBarItemRecord {
         MenuBarItemRecord(
             id: id,

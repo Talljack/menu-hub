@@ -144,6 +144,8 @@ struct HubItemRow: View {
             .accessibilityLabel(accessibility.label)
             .accessibilityValue(accessibility.value)
             .accessibilityHint(accessibility.help)
+            .accessibilityInputLabels([item.record.hostName, item.primaryTitle])
+            .accessibilityIdentifier("hub.item.\(item.id)")
 
             actionMenuButton
         }
@@ -161,7 +163,7 @@ struct HubItemRow: View {
                         .multilineTextAlignment(.center)
                     if showsCapability {
                         Text(hasFailure ? L("panel.actionFailed") : (hasSucceeded ? L("panel.completed") : item.secondaryTitle))
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundStyle(hasFailure ? Color.red : Color.secondary)
                             .lineLimit(1)
                     }
@@ -174,6 +176,8 @@ struct HubItemRow: View {
             .accessibilityLabel(accessibility.label)
             .accessibilityValue(accessibility.value)
             .accessibilityHint(accessibility.help)
+            .accessibilityInputLabels([item.record.hostName, item.primaryTitle])
+            .accessibilityIdentifier("hub.item.\(item.id)")
 
             actionMenuButton
                 .padding(4)

@@ -112,6 +112,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         configureStatusItems()
         configureMainMenu()
+        if let application = NSApp as? MenuHubApplication {
+            application.favoriteKeyHandler = { [weak self] event in
+                guard let self, popover.isShown,
+                      case .commandDigit(let digit) = PanelKeyboardRouter().command(for: event) else { return false }
+                panelModel.invokeFavorite(at: digit - 1)
+                return true
+            }
+        }
         #if DEBUG
         panelModel.hotKeyAvailable = uiTestRuntime == nil ? hotKeyController.registerCommandOptionControlM() : true
         #else
@@ -233,6 +241,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     @objc private func handleSafetyEvent() {
         revealItems(immediate: true)
+        state.updateMaximumSafeWidth(maximumSafeSpacerWidth())
         panelModel.applicationSetDidChange()
     }
 
@@ -421,15 +430,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func registerPersistedHotKeyWhenLoaded() {
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            for _ in 0..<100 where panelModel.operationState == .loading {
-                try? await Task.sleep(for: .milliseconds(20))
+        panelModel.$hasFinishedInitialLoad
+            .filter { $0 }
+            .prefix(1)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                let preferences = panelModel.catalogController.document.preferences
+                let descriptor = HotKeyDescriptor(preferences.hotKey)
+                panelModel.hotKeyAvailable = hotKeyController.register(descriptor) == .registered
+                applyPreferences(preferences)
             }
-            let descriptor = HotKeyDescriptor(panelModel.catalogController.document.preferences.hotKey)
-            panelModel.hotKeyAvailable = hotKeyController.register(descriptor) == .registered
-            applyPreferences(panelModel.catalogController.document.preferences)
-        }
+            .store(in: &diagnosticSubscriptions)
     }
 
     private func applyPreferences(_ preferences: Preferences) {
@@ -516,8 +527,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func maximumSafeSpacerWidth() -> Double {
-        guard let screen = NSScreen.main else { return 320 }
-        return max(80, min(600, screen.visibleFrame.width * 0.45))
+        MenuBarScreenGeometry.maximumSafeSpacerWidth(
+            statusItemVisibleWidth: (hubItem.button?.window?.screen?.visibleFrame.width).map(Double.init),
+            fallbackVisibleWidth: (NSScreen.main?.visibleFrame.width).map(Double.init)
+        )
     }
 
     @objc private func presentOnboarding() {
