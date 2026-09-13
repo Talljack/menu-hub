@@ -173,12 +173,16 @@ final class HubPanelModelTests: XCTestCase {
         let model = HubPanelModel(controller: controller, now: { testNow }, initialPermissionState: .authorized)
         model.selectionID = "a"
 
+        var didObserveReplacementSnapshot = false
         var selectionWhenReplacementSnapshotPublished: String?
         var cancellables = Set<AnyCancellable>()
         model.$snapshot
             .dropFirst()
             .filter { $0.all.map(\.id) == ["b"] }
-            .sink { _ in selectionWhenReplacementSnapshotPublished = model.selectionID }
+            .sink { _ in
+                didObserveReplacementSnapshot = true
+                selectionWhenReplacementSnapshotPublished = model.selectionID
+            }
             .store(in: &cancellables)
 
         let rescan = Task { await controller.scan() }
@@ -187,6 +191,7 @@ final class HubPanelModelTests: XCTestCase {
         await rescan.value
 
         XCTAssertEqual(model.snapshot.all.map(\.id), ["b"])
+        XCTAssertTrue(didObserveReplacementSnapshot)
         XCTAssertNil(selectionWhenReplacementSnapshotPublished)
         XCTAssertNil(model.selectionID)
     }
@@ -623,7 +628,7 @@ final class HubPanelModelTests: XCTestCase {
         XCTAssertTrue(model.snapshot.all.contains { $0.identity.bundleIdentifier == "com.example.notion" })
     }
 
-    func testBackgroundMonitoringPerformsPeriodicFullDiscoveryForNewApplications() async {
+    func testBackgroundMonitoringKeepsPeriodicUpdatesLightweightAfterDiscoveryDeadline() async {
         let clock = LockedPanelClock(testNow)
         let accessibility = ControlledAccessibility()
         let scheduler = ManualPanelLiveUpdateScheduler()
@@ -643,16 +648,15 @@ final class HubPanelModelTests: XCTestCase {
 
         clock.advance(by: 21)
         let deadline = ContinuousClock.now + .seconds(1)
-        var scanCount = await accessibility.scanRequestCount
-        while scanCount < 2, ContinuousClock.now < deadline {
+        var refreshCount = await accessibility.refreshRequestCount
+        while refreshCount < 1, ContinuousClock.now < deadline {
             scheduler.fire()
             await Task.yield()
-            scanCount = await accessibility.scanRequestCount
+            refreshCount = await accessibility.refreshRequestCount
         }
-        let refreshCount = await accessibility.refreshRequestCount
-        XCTAssertEqual(scanCount, 2)
-        XCTAssertEqual(refreshCount, 0)
-        await accessibility.completeScan(1, with: .init(snapshots: [testSnapshot()], errors: []))
+        let scanCount = await accessibility.scanRequestCount
+        XCTAssertEqual(scanCount, 1)
+        XCTAssertEqual(refreshCount, 1)
     }
 
     func testApplicationLaunchDuringScanQueuesAnotherFullDiscovery() async {
@@ -678,6 +682,11 @@ final class HubPanelModelTests: XCTestCase {
         }
         XCTAssertEqual(scanCount, 2)
         await accessibility.completeScan(1, with: .init(snapshots: [testSnapshot()], errors: []))
+        let secondScanFinished = await waitUntil { !controller.isScanning }
+        XCTAssertTrue(secondScanFinished)
+        await Task.yield()
+        let stableScanCount = await accessibility.scanRequestCount
+        XCTAssertEqual(stableScanCount, 2)
     }
 
     func testTerminationPreparationFlushesDebouncedScanPersistence() async {

@@ -414,7 +414,8 @@ final class HubPanelModel: ObservableObject {
                   self.liveUpdatesActive, self.permissionGranted,
                   self.inFlightLiveScanTask == nil && !self.controller.isScanning else { return }
             if case .invoking = self.operationState { return }
-            let fullDiscovery = self.nextFullDiscoveryAt.map { self.now() >= $0 } ?? true
+            let fullDiscovery = self.monitoringMode == .foreground
+                && (self.nextFullDiscoveryAt.map { self.now() >= $0 } ?? true)
             self.startLiveScan(fullDiscovery: fullDiscovery)
         }
         scheduledLiveUpdateInterval = interval
