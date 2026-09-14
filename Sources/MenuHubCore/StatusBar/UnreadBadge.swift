@@ -115,7 +115,7 @@ public enum UnreadBadgeAggregator {
 
         for record in records where !record.isIgnored && seen.insert(record.id).inserted {
             guard let snapshot = snapshots[record.id], shouldInclude(record: record, snapshot: snapshot),
-                  let unread = UnreadCountParser.parse(snapshot.title) else { continue }
+                  let unread = unreadCount(record: record, snapshot: snapshot) else { continue }
             switch unread {
             case .atLeast99:
                 return .overflow
@@ -128,6 +128,33 @@ public enum UnreadBadgeAggregator {
         }
 
         return total > 0 ? .count(total) : .hidden
+    }
+
+    private static func unreadCount(
+        record: MenuBarItemRecord,
+        snapshot: AccessibilitySnapshot
+    ) -> UnreadCountValue? {
+        if let unread = UnreadCountParser.parse(snapshot.title) { return unread }
+        guard isLark(record: record, snapshot: snapshot),
+              let title = snapshot.title?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+        let components = title.components(separatedBy: "@·")
+        guard components.count == 2,
+              case .exact = UnreadCountParser.parse(components[0]) else { return nil }
+        return UnreadCountParser.parse(components[1])
+    }
+
+    private static func isLark(record: MenuBarItemRecord, snapshot: AccessibilitySnapshot) -> Bool {
+        let bundleIdentifiers = [
+            record.hostBundleIdentifier,
+            snapshot.bundleIdentifier,
+            record.identity.bundleIdentifier
+        ]
+        return bundleIdentifiers.compactMap { $0?.lowercased() }.contains { bundleIdentifier in
+            bundleIdentifier == "com.electron.lark"
+                || bundleIdentifier == "com.electron.lark.helper"
+                || bundleIdentifier == "com.larksuite.feishu"
+                || bundleIdentifier == "com.larksuite.lark"
+        }
     }
 
     private static func shouldInclude(record: MenuBarItemRecord, snapshot: AccessibilitySnapshot) -> Bool {

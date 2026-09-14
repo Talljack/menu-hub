@@ -65,6 +65,22 @@ final class UnreadBadgeTests: XCTestCase {
         )
     }
 
+    func testAggregatorUsesTotalUnreadCountFromLarkCompositeStatusTitle() {
+        let lark = record(id: "lark", bundleID: "com.electron.lark", hostName: "Feishu")
+        let snapshots = [
+            "lark": snapshot(
+                bundleID: "com.electron.lark.helper",
+                processName: "Lark Helper",
+                title: "2@·20"
+            )
+        ]
+
+        XCTAssertEqual(
+            UnreadBadgeAggregator.presentation(records: [lark], snapshots: snapshots),
+            .count(20)
+        )
+    }
+
     private func record(
         id: String,
         bundleID: String,
