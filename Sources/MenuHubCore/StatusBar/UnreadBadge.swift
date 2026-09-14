@@ -57,6 +57,9 @@ public enum ChatApplicationClassifier {
         "com.discord.discord",
         "com.hnc.discord",
         "com.kakao.kakaotalkmac",
+        "com.electron.lark",
+        "com.electron.lark.helper",
+        "com.lark.helper",
         "com.larksuite.feishu",
         "com.larksuite.lark",
         "com.mattermost.desktop",
@@ -152,6 +155,7 @@ public enum UnreadBadgeAggregator {
         return bundleIdentifiers.compactMap { $0?.lowercased() }.contains { bundleIdentifier in
             bundleIdentifier == "com.electron.lark"
                 || bundleIdentifier == "com.electron.lark.helper"
+                || bundleIdentifier == "com.lark.helper"
                 || bundleIdentifier == "com.larksuite.feishu"
                 || bundleIdentifier == "com.larksuite.lark"
         }

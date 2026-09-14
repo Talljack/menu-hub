@@ -66,7 +66,7 @@ final class UnreadBadgeTests: XCTestCase {
     }
 
     func testAggregatorUsesTotalUnreadCountFromLarkCompositeStatusTitle() {
-        let lark = record(id: "lark", bundleID: "com.electron.lark", hostName: "Feishu")
+        let lark = record(id: "lark", bundleID: "com.electron.lark", hostName: "Lark Helper")
         let snapshots = [
             "lark": snapshot(
                 bundleID: "com.electron.lark.helper",
@@ -79,6 +79,33 @@ final class UnreadBadgeTests: XCTestCase {
             UnreadBadgeAggregator.presentation(records: [lark], snapshots: snapshots),
             .count(20)
         )
+    }
+
+    func testAggregatorRejectsCompositeStatusTitlesOutsideLark() {
+        let utility = record(id: "utility", bundleID: "com.example.utility", hostName: "Utility", preference: .include)
+        let snapshots = [
+            "utility": snapshot(bundleID: "com.example.utility", processName: "Utility", title: "2@·20")
+        ]
+
+        XCTAssertEqual(
+            UnreadBadgeAggregator.presentation(records: [utility], snapshots: snapshots),
+            .hidden
+        )
+    }
+
+    func testAggregatorRejectsMalformedLarkCompositeStatusTitles() {
+        let lark = record(id: "lark", bundleID: "com.electron.lark", hostName: "Lark Helper")
+
+        for title in ["@·20", "2@·", "2@·20@·30", "mentions@·20"] {
+            let snapshots = [
+                "lark": snapshot(bundleID: "com.electron.lark.helper", processName: "Lark Helper", title: title)
+            ]
+            XCTAssertEqual(
+                UnreadBadgeAggregator.presentation(records: [lark], snapshots: snapshots),
+                .hidden,
+                title
+            )
+        }
     }
 
     private func record(
